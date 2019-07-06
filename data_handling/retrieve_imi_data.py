@@ -57,14 +57,7 @@ def get_IMI_data(start_date, end_date, username):
 
 def curl_data(filename, filepath, month, username, password):
     """
-    Do something with some list.
-    Arguments:
-    timestamp: some argument (default 0)
-    gugus2: other argument (default "Hoi")
-    Returns:
-    A number
     """
-
 
     url = f"https://www.exfeed.com/client_area/download/imi/{month}/{filename}"
 
