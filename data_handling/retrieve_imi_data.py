@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
+"""Retrieves historical data from SIX IMI data feed
 """
-"""
-
 import os
 import getpass
 import gzip
