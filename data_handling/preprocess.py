@@ -1,107 +1,308 @@
 #!/usr/bin/env python3
 """
 """
+
+# standard libraries
 import cProfile, pstats
 import os
-import struct
+from collections import defaultdict, Counter, namedtuple
+from dataclasses import dataclass
+from itertools import islice
+from multiprocessing import Pool
+from operator import neg
 from pathlib import Path
+from sortedcontainers import SortedDict
+from struct import unpack
+from typing import List, Dict
+
+# third-party packages
+import pandas as pd
+from tqdm import tqdm
 
 
 def main():
-
     data_path = Path.home() / "data/ITCH_market_data/binary"
-    binary_files = [file for file in os.listdir(data_path) if file.endswith(".bin")]
 
-    file_name = Path(binary_files[2])
-    file_path = data_path / file_name
+    binary_files = get_files(data_path)
+#    binary_files = [file_path for date, file_path in binary_files.items() if date.startswith(2019)]
 
     # Start profiler
     pr = cProfile.Profile()
     pr.enable()
 
-    messages = list()
-
-    # Read the whole file into memory
-    with open(file_path, "rb") as binary_file:
-        data = binary_file.read()
-
-    current_position = 0
-    number_of_bytes = len(data)
-
-    # loop through all messages
-    while True:
-        message_length = data[current_position + 1]
-        message_type = data[current_position + 2:current_position + 3]
-        message_start = current_position + 3
-        message_end = current_position + message_length + 2
-
-        if message_type == b"A":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iqsiii", message)
-            timestamp = message[0]
-            order_no = message[1]
-            order_verb = message[2]
-            order_quantity = message[3]
-            orderbook = message[4]
-            order_price = message[5]
-
-        elif message_type == b"D":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iq", message)
-        elif message_type == b"U":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iqqii", message)
-        elif message_type == b"E":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iqiq", message)
-        elif message_type == b"I":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iqiiiis", message)
-        elif message_type == b"T":
-            message = data[message_start:message_end]
-            message = struct.unpack(">i", message)
-        elif message_type == b"C":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iqiqsi", message)
-        elif message_type == b"P":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iiiiqs", message)
-        elif message_type == b"P":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iiiiqs", message)
-        elif message_type == b"R":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iis12s3s8siiiiii", message)
-        elif message_type == b"H":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iiss", message)
-        elif message_type == b"L":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iiii", message)
-        elif message_type == b"S":
-            message = data[message_start:message_end]
-            message = struct.unpack(">i8ssi", message)
-        elif message_type == b"M":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iiii", message)
-        elif message_type == b"B":
-            message = data[message_start:message_end]
-            message = struct.unpack(">iqs", message)
-        else:
-            raise ValueError(f"Message type {message_type} could not be found")
-
-        messages.append(message)
-
-        current_position = message_end
-
-        if current_position >= number_of_bytes:
-            break
+    load_and_process_one(file_path = binary_files["2018-07-11"])
+    #load_and_process_all(binary_files)
 
     pr.disable()
 
-    sortby = 'cumulative'
+    sortby = 'tottime'
     ps = pstats.Stats(pr).sort_stats(sortby)
     ps.print_stats()
+
+
+def get_files(data_path: str) -> Dict[str, str]:
+    binary_files = {file[-14:-4].replace("_", "-"):data_path / (file) for file in os.listdir(data_path) if file.endswith(".bin")}
+    return binary_files
+
+
+def load_and_process_all(binary_files: Dict[str, str]):
+    with Pool(processes=os.cpu_count()) as pool:
+        pool.map(load_and_process_one, binary_files)
+
+
+def load_and_process_one(file_path: str):
+    this_day_imi_data = SingleDayIMIData(file_path)
+    this_day_imi_data.process_messages()
+
+
+class OrderBookSide(SortedDict):
+    def __missing__(self, key):
+        return 0
+
+
+class SingleDayIMIData(object):
+    """Class that loads and processes IMI messages for a single date"""
+
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.current_position = 0
+
+        self.orders = defaultdict(dict)
+        self.orderbooks = defaultdict(dict)
+        self.get_order_info = itemgetter("orderbook", "order_verb", "order_entry_price", "order_quantity_outstanding")
+
+        # Reading the binary file into memory
+        with open(self.file_path, "rb") as binary_file:
+            self.data = binary_file.read()
+        self.number_of_bytes = len(self.data)
+
+    def process_messages(self):
+        """Convert and process all messages inside a loop"""
+
+        # first check if we are at the end of the file, if so: stop
+        while self.current_position < self.number_of_bytes:
+
+            message_length = self.data[self.current_position + 1]
+            message_type = self.data[self.current_position + 2:self.current_position + 3]
+            message_start = self.current_position + 3
+            message_end = self.current_position + message_length + 2
+
+            message = self.data[message_start:message_end]
+
+            # Add Order Message
+            if message_type == b"A":
+                message = unpack(">iqsiii", message)
+                order_no = message[1]
+                order_verb = message[2]
+                order_quantity = message[3]
+                orderbook = message[4]
+                order_price = message[5]
+                # aggregate with best bid/ask in orderbook
+                best_bid_price, best_bid_quantity = self.orderbooks[orderbook][b'B'].peekitem(0)
+                best_ask_price, best_ask_quantity = self.orderbooks[orderbook][b'S'].peekitem(0)
+
+                self.orders[order_no].update({
+                    "order_entry_time": self.microseconds + message[0] * 1e-3,
+                    "order_verb": order_verb,
+                    "order_quantity_entered": order_quantity,
+                    "order_quantity_outstanding": order_quantity,
+                    "orderbook": orderbook,
+                    "order_entry_price": order_price,
+                    "order_filled_price": np.nan,
+                    "order_remove_time": np.nan,
+                    "status": "open",
+                    "best_bid_quantity": best_bid_quantity,
+                    "best_bid_price": best_bid_price,
+                    "best_ask_price": best_ask_price,
+                    "best_ask_quantity": best_ask_quantity})
+                # update the side (order_verb) of the orderbook
+                self.orderbooks[orderbook][order_verb][order_price] += order_quantity
+
+            # Orderbook Directory message
+            elif message_type == b"R":
+                message = unpack(">iis12s3s8siiiiii", message)
+                orderbook = message[1]
+                # initialize each side of the orderbook
+                self.orderbooks[orderbook][b"B"] = OrderBookSide(neg, [(-np.inf, 0)])
+                self.orderbooks[orderbook][b"S"] = OrderBookSide([(np.inf, 0)])
+                self.orderbooks[orderbook][b" "] = OrderBookSide([(np.nan, 0)])
+
+            # Time Stamp – Seconds message
+            elif message_type == b"T":
+                message = unpack(">i", message)
+                self.microseconds = int(message[0] * 1e6)
+
+            # Order Delete Message
+            elif message_type == b"D":
+                message = unpack(">iq", message)
+                order_no = message[1]
+                # update the order entry
+                self.orders[order_no]["order_remove_time"] = self.microseconds + message[0] * 1e-3
+                self.orders[order_no]["order_quantity_outstanding"] = 0
+                if self.orders[order_no]["status"] is None:
+                    self.orders[order_no]["status"] = "deleted"
+                elif self.orders[order_no]["status"] == "partially filled":
+                    self.orders[order_no]["status"] = "partially filled & deleted"
+                else:
+                    self.orders[order_no]["status"] = "deleted"
+                # update the order book
+                orderbook, order_verb, order_price, quantity_outstanding = self.get_order_info(self.orders[order_no])
+                self.orderbooks[orderbook][order_verb][order_price] -= quantity_outstanding
+                if self.orderbooks[orderbook][order_verb][order_price] == 0:
+                    del self.orderbooks[orderbook][order_verb][order_price]
+
+            # Order Replace Message
+            elif message_type == b"U":
+                message = unpack(">iqqii", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                old_order_no = message[1]
+                new_order_no = message[2]
+                order_quantity = message[3]
+                order_price = message[4]
+                order_verb = self.orders[old_order_no]["order_verb"]
+                orderbook = self.orders[old_order_no]["orderbook"]
+                # aggregate with best bid/ask in orderbook
+                best_bid_price, best_bid_quantity = self.orderbooks[orderbook][b'B'].peekitem(0)
+                best_ask_price, best_ask_quantity = self.orderbooks[orderbook][b'S'].peekitem(0)
+
+                self.orders[new_order_no].update({
+                    "order_entry_time": self.microseconds + message[0] * 1e-3,
+                    "order_verb": order_verb,
+                    "order_quantity_entered": order_quantity,
+                    "order_quantity_outstanding": order_quantity,
+                    "orderbook": orderbook,
+                    "order_entry_price": order_price,
+                    "order_filled_price": np.nan,
+                    "order_remove_time": np.nan,
+                    "status": "open",
+                    "best_bid_quantity": best_bid_quantity,
+                    "best_bid_price": best_bid_price,
+                    "best_ask_price": best_ask_price,
+                    "best_ask_quantity": best_ask_quantity})
+                # mark old order as replaced
+                self.orders[old_order_no].update({
+                    "order_remove_time": timestamp,
+                    "status": "replaced"})
+                # adjust orderbook
+                # new order
+                self.orderbooks[orderbook][order_verb][order_price] += order_quantity
+                # old order
+                old_order_price = self.orders[old_order_no]["order_entry_price"]
+                self.orderbooks[orderbook][order_verb][old_order_price] -= self.orders[old_order_no]["order_quantity_outstanding"]
+                if self.orderbooks[orderbook][order_verb][old_order_price] == 0:
+                    del self.orderbooks[orderbook][order_verb][old_order_price]
+
+            # Order Executed Message
+            elif message_type == b"E":
+                message = unpack(">iqiq", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                order_no = message[1]
+                executed_quantity = message[2]
+                match_number = message[3]
+                # update the order entry
+                self.orders[order_no].update({"order_remove_time": timestamp,
+                    "order_filled_price": self.orders[order_no]["order_entry_price"]})
+                self.orders[order_no]["order_quantity_outstanding"] -= executed_quantity
+                if self.orders[order_no]["order_quantity_outstanding"] == 0:
+                    self.orders[order_no].update({
+                        "status": "filled",
+                        "order_remove_time": timestamp})
+                else:
+                    self.orders[order_no]["status"] = "partially filled"
+                # update the order book
+                orderbook, order_verb, order_price, _ = self.get_order_info(self.orders[order_no])
+                self.orderbooks[orderbook][order_verb][order_price] -= executed_quantity
+                if self.orderbooks[orderbook][order_verb][order_price] == 0:
+                    del self.orderbooks[orderbook][order_verb][order_price]
+
+            # Order Executed With Price message
+            elif message_type == b"C":
+                message = unpack(">iqiqsi", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                order_no = message[1]
+                executed_quantity = message[2]
+                match_number = message[3]
+                printable = message[4]
+                execution_price = message[5]
+                # update the order entry
+                self.orders[order_no].update({
+                    "order_remove_time": timestamp,
+                    "order_filled_price": execution_price})
+                self.orders[order_no]["order_quantity_outstanding"] -= executed_quantity
+                if self.orders[order_no]["order_quantity_outstanding"] == 0:
+                    self.orders[order_no]["status"] = "filled"
+                    self.orders[old_order_no]["order_remove_time"] = timestamp
+                else:
+                    self.orders[order_no]["status"] = "partially filled"
+                # update the order book
+                orderbook, order_verb, order_price, _ = self.get_order_info(self.orders[order_no])
+                self.orderbooks[orderbook][order_verb][order_price] -= executed_quantity
+                if self.orderbooks[orderbook][order_verb][order_price] == 0:
+                    del self.orderbooks[orderbook][order_verb][order_price]
+
+            # Indicative Price / Quantity Message
+            elif message_type == b"I":
+                # message = unpack(">iqiiiis", message)
+                pass # not relevant
+
+            # Trade message (SwissAtMid / EBBO)
+            elif message_type == b"P":
+                message = unpack(">iiiiqs", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                orderbook = message[1]
+                executed_quantity = message[2]
+                execution_price = message[3]
+                match_number = message[4]
+                book_type = message[5]
+
+            # Broken Trade message
+            elif message_type == b"B":
+                message = unpack(">iqs", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                match_number = message[1]
+                reason = message[2]
+
+            # Orderbook Trading Action message
+            elif message_type == b"H":
+                message = unpack(">iiss", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                orderbook = message[1]
+                trading_state = message[2]
+                book_condition = message[3]
+
+            # Price Tick Size message
+            elif message_type == b"L":
+                message = unpack(">iiii", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                price_tick_table_id = message[1]
+                price_tick_size = message[2]
+                price_start = message[3]
+
+            # System Event message
+            elif message_type == b"S":
+                message = unpack(">i8ssi", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                group = message[1]
+                event_code = message[2]
+                orderbook = message[3]
+
+            # Quantity Tick Size message
+            elif message_type == b"M":
+                message = unpack(">iiii", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                quantity_tick_table_id = message[1]
+                quantity_tick_size = message[2]
+                quantity_start = message[3]
+
+            elif message_type == b"G":  # not relevant
+                pass
+
+            else:
+                raise ValueError(f"Message type {message_type} could not be found")
+
+            # update current position for next iteration
+            self.current_position = message_end
+
 
 if __name__ == "__main__":
     main()
