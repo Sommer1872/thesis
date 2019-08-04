@@ -3,56 +3,14 @@
 """
 
 # standard libraries
-import cProfile, pstats
-import os
-from collections import defaultdict, Counter, namedtuple
-from dataclasses import dataclass
-from itertools import islice
-from multiprocessing import Pool
-from operator import neg
-from pathlib import Path
+from collections import defaultdict, Counter
+from operator import neg, itemgetter
 from sortedcontainers import SortedDict
 from struct import unpack
-from typing import List, Dict
 
 # third-party packages
-import pandas as pd
+import numpy as np
 from tqdm import tqdm
-
-
-def main():
-    data_path = Path.home() / "data/ITCH_market_data/binary"
-
-    binary_files = get_files(data_path)
-#    binary_files = [file_path for date, file_path in binary_files.items() if date.startswith(2019)]
-
-    # Start profiler
-    pr = cProfile.Profile()
-    pr.enable()
-
-    load_and_process_one(file_path = binary_files["2018-07-11"])
-    #load_and_process_all(binary_files)
-
-    pr.disable()
-
-    sortby = 'tottime'
-    ps = pstats.Stats(pr).sort_stats(sortby)
-    ps.print_stats()
-
-
-def get_files(data_path: str) -> Dict[str, str]:
-    binary_files = {file[-14:-4].replace("_", "-"):data_path / (file) for file in os.listdir(data_path) if file.endswith(".bin")}
-    return binary_files
-
-
-def load_and_process_all(binary_files: Dict[str, str]):
-    with Pool(processes=os.cpu_count()) as pool:
-        pool.map(load_and_process_one, binary_files)
-
-
-def load_and_process_one(file_path: str):
-    this_day_imi_data = SingleDayIMIData(file_path)
-    this_day_imi_data.process_messages()
 
 
 class OrderBookSide(SortedDict):
@@ -98,23 +56,21 @@ class SingleDayIMIData(object):
                 orderbook = message[4]
                 order_price = message[5]
                 # aggregate with best bid/ask in orderbook
-                best_bid_price, best_bid_quantity = self.orderbooks[orderbook][b'B'].peekitem(0)
-                best_ask_price, best_ask_quantity = self.orderbooks[orderbook][b'S'].peekitem(0)
-
-                self.orders[order_no].update({
-                    "order_entry_time": self.microseconds + message[0] * 1e-3,
-                    "order_verb": order_verb,
-                    "order_quantity_entered": order_quantity,
-                    "order_quantity_outstanding": order_quantity,
-                    "orderbook": orderbook,
-                    "order_entry_price": order_price,
-                    "order_filled_price": np.nan,
-                    "order_remove_time": np.nan,
-                    "status": "open",
-                    "best_bid_quantity": best_bid_quantity,
-                    "best_bid_price": best_bid_price,
-                    "best_ask_price": best_ask_price,
-                    "best_ask_quantity": best_ask_quantity})
+                # best_bid_price, best_bid_quantity = self.orderbooks[orderbook][b'B'].peekitem(0)
+                # best_ask_price, best_ask_quantity = self.orderbooks[orderbook][b'S'].peekitem(0)
+                self.orders[order_no]["order_entry_time"] = self.microseconds + message[0] * 1e-3
+                self.orders[order_no]["order_verb"] = order_verb
+                self.orders[order_no]["order_quantity_entered"] = order_quantity
+                self.orders[order_no]["order_quantity_outstanding"] = order_quantity
+                self.orders[order_no]["orderbook"] = orderbook
+                self.orders[order_no]["order_entry_price"] = order_price
+                self.orders[order_no]["order_filled_price"] = np.nan
+                self.orders[order_no]["order_remove_time"] = np.nan
+                self.orders[order_no]["status"] = "open"
+                self.orders[order_no]["best_bid_quantity"] = best_bid_quantity
+                self.orders[order_no]["best_bid_price"] = best_bid_price
+                self.orders[order_no]["best_ask_price"] = best_ask_price
+                self.orders[order_no]["best_ask_quantity"] = best_ask_quantity
                 # update the side (order_verb) of the orderbook
                 self.orderbooks[orderbook][order_verb][order_price] += order_quantity
 
@@ -145,11 +101,11 @@ class SingleDayIMIData(object):
                     self.orders[order_no]["status"] = "partially filled & deleted"
                 else:
                     self.orders[order_no]["status"] = "deleted"
-                # update the order book
-                orderbook, order_verb, order_price, quantity_outstanding = self.get_order_info(self.orders[order_no])
-                self.orderbooks[orderbook][order_verb][order_price] -= quantity_outstanding
-                if self.orderbooks[orderbook][order_verb][order_price] == 0:
-                    del self.orderbooks[orderbook][order_verb][order_price]
+                # # update the order book
+                # orderbook, order_verb, order_price, quantity_outstanding = self.get_order_info(self.orders[order_no])
+                # self.orderbooks[orderbook][order_verb][order_price] -= quantity_outstanding
+                # if self.orderbooks[orderbook][order_verb][order_price] == 0:
+                #     del self.orderbooks[orderbook][order_verb][order_price]
 
             # Order Replace Message
             elif message_type == b"U":
@@ -164,33 +120,31 @@ class SingleDayIMIData(object):
                 # aggregate with best bid/ask in orderbook
                 best_bid_price, best_bid_quantity = self.orderbooks[orderbook][b'B'].peekitem(0)
                 best_ask_price, best_ask_quantity = self.orderbooks[orderbook][b'S'].peekitem(0)
-
-                self.orders[new_order_no].update({
-                    "order_entry_time": self.microseconds + message[0] * 1e-3,
-                    "order_verb": order_verb,
-                    "order_quantity_entered": order_quantity,
-                    "order_quantity_outstanding": order_quantity,
-                    "orderbook": orderbook,
-                    "order_entry_price": order_price,
-                    "order_filled_price": np.nan,
-                    "order_remove_time": np.nan,
-                    "status": "open",
-                    "best_bid_quantity": best_bid_quantity,
-                    "best_bid_price": best_bid_price,
-                    "best_ask_price": best_ask_price,
-                    "best_ask_quantity": best_ask_quantity})
+                self.orders[new_order_no]["order_entry_time"] = self.microseconds + message[0] * 1e-3
+                self.orders[new_order_no]["order_verb"] = order_verb
+                self.orders[new_order_no]["order_quantity_entered"] = order_quantity
+                self.orders[new_order_no]["order_quantity_outstanding"] = order_quantity
+                self.orders[new_order_no]["orderbook"] = orderbook
+                self.orders[new_order_no]["order_entry_price"] = order_price
+                self.orders[new_order_no]["order_filled_price"] = np.nan
+                self.orders[new_order_no]["order_remove_time"] = np.nan
+                self.orders[new_order_no]["status"] = "open"
+                self.orders[new_order_no]["best_bid_quantity"] = best_bid_quantity
+                self.orders[new_order_no]["best_bid_price"] = best_bid_price
+                self.orders[new_order_no]["best_ask_price"] = best_ask_price
+                self.orders[new_order_no]["best_ask_quantity"] = best_ask_quantity
                 # mark old order as replaced
                 self.orders[old_order_no].update({
                     "order_remove_time": timestamp,
                     "status": "replaced"})
-                # adjust orderbook
-                # new order
-                self.orderbooks[orderbook][order_verb][order_price] += order_quantity
-                # old order
-                old_order_price = self.orders[old_order_no]["order_entry_price"]
-                self.orderbooks[orderbook][order_verb][old_order_price] -= self.orders[old_order_no]["order_quantity_outstanding"]
-                if self.orderbooks[orderbook][order_verb][old_order_price] == 0:
-                    del self.orderbooks[orderbook][order_verb][old_order_price]
+                # # adjust orderbook
+                # # new order
+                # self.orderbooks[orderbook][order_verb][order_price] += order_quantity
+                # # old order
+                # old_order_price = self.orders[old_order_no]["order_entry_price"]
+                # self.orderbooks[orderbook][order_verb][old_order_price] -= self.orders[old_order_no]["order_quantity_outstanding"]
+                # if self.orderbooks[orderbook][order_verb][old_order_price] == 0:
+                #     del self.orderbooks[orderbook][order_verb][old_order_price]
 
             # Order Executed Message
             elif message_type == b"E":
@@ -200,7 +154,8 @@ class SingleDayIMIData(object):
                 executed_quantity = message[2]
                 match_number = message[3]
                 # update the order entry
-                self.orders[order_no].update({"order_remove_time": timestamp,
+                self.orders[order_no].update({
+                    "order_remove_time": timestamp,
                     "order_filled_price": self.orders[order_no]["order_entry_price"]})
                 self.orders[order_no]["order_quantity_outstanding"] -= executed_quantity
                 if self.orders[order_no]["order_quantity_outstanding"] == 0:
@@ -209,11 +164,11 @@ class SingleDayIMIData(object):
                         "order_remove_time": timestamp})
                 else:
                     self.orders[order_no]["status"] = "partially filled"
-                # update the order book
-                orderbook, order_verb, order_price, _ = self.get_order_info(self.orders[order_no])
-                self.orderbooks[orderbook][order_verb][order_price] -= executed_quantity
-                if self.orderbooks[orderbook][order_verb][order_price] == 0:
-                    del self.orderbooks[orderbook][order_verb][order_price]
+                # # update the order book
+                # orderbook, order_verb, order_price, _ = self.get_order_info(self.orders[order_no])
+                # self.orderbooks[orderbook][order_verb][order_price] -= executed_quantity
+                # if self.orderbooks[orderbook][order_verb][order_price] == 0:
+                #     del self.orderbooks[orderbook][order_verb][order_price]
 
             # Order Executed With Price message
             elif message_type == b"C":
@@ -234,11 +189,11 @@ class SingleDayIMIData(object):
                     self.orders[old_order_no]["order_remove_time"] = timestamp
                 else:
                     self.orders[order_no]["status"] = "partially filled"
-                # update the order book
-                orderbook, order_verb, order_price, _ = self.get_order_info(self.orders[order_no])
-                self.orderbooks[orderbook][order_verb][order_price] -= executed_quantity
-                if self.orderbooks[orderbook][order_verb][order_price] == 0:
-                    del self.orderbooks[orderbook][order_verb][order_price]
+                # # update the order book
+                # orderbook, order_verb, order_price, _ = self.get_order_info(self.orders[order_no])
+                # self.orderbooks[orderbook][order_verb][order_price] -= executed_quantity
+                # if self.orderbooks[orderbook][order_verb][order_price] == 0:
+                #     del self.orderbooks[orderbook][order_verb][order_price]
 
             # Indicative Price / Quantity Message
             elif message_type == b"I":
@@ -302,6 +257,10 @@ class SingleDayIMIData(object):
 
             # update current position for next iteration
             self.current_position = message_end
+
+
+def main():
+    pass
 
 
 if __name__ == "__main__":
