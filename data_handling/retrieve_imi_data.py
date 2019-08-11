@@ -3,7 +3,6 @@
 """
 import os
 import getpass
-import gzip
 from pathlib import Path
 import requests
 import shutil
@@ -11,25 +10,27 @@ import shutil
 import pandas as pd
 from tqdm import tqdm
 
+
 def main():
 
-    start_date = pd.Timestamp(2019, 1, 1)
-    end_date = pd.Timestamp(2019, 7, 31)
+    start_date = pd.Timestamp(2019, 6, 11)
+    end_date = pd.Timestamp(2019, 6, 11)
     username = "simon.sommer@student.unisg.ch"
 
     # retrieve and download all IMI files between start_date and end_date
     get_IMI_data(start_date, end_date, username)
 
 
-def get_IMI_data(start_date, end_date, username):
-
+def get_IMI_data(start_date: pd.Timestamp, end_date: pd.Timestamp, username: str):
+    """
+    """
     print(f"\nUser: {username}")
     password = getpass.getpass('Please enter password here and confirm with <ENTER>')
 
     weekdays = get_weekday_dates(start_date, end_date)
 
     home = os.path.expanduser("~")
-    data_path = f"{home}/data/ITCH_market_data/binary"
+    data_path = f"{home}/data/ITCH_market_data/zipped"
     os.makedirs(data_path, exist_ok=True)
 
     for timestamp in tqdm(weekdays):
@@ -42,22 +43,14 @@ def get_IMI_data(start_date, end_date, username):
             continue
 
         # download the file
-        filepath = curl_data(filename, filepath, month, username=username, password=password)
+        curl_data(filename, filepath, month, username=username, password=password)
 
-        # unzip it and save binary file
-        with gzip.open(filepath, 'rb') as f_in:
-            with open(filepath.with_suffix(''), 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+        tqdm.write(f"File saved to:\n{filepath}\n")
 
-        tqdm.write(f"File saved to:\n{filepath.with_suffix('')}\n")
 
-        # delete the .gz file
-        os.remove(filepath)
-
-def curl_data(filename, filepath, month, username, password):
+def curl_data(filename: str, filepath: Path, month: str, username: str, password: str):
     """
     """
-
     url = f"https://www.exfeed.com/client_area/download/imi/{month}/{filename}"
 
     response = requests.get(url, auth=(username, password), stream=True)
@@ -69,8 +62,6 @@ def curl_data(filename, filepath, month, username, password):
 
     else:
         raise ValueError("response.status.code was not == 200")
-
-    return filepath
 
 
 def get_weekday_dates(start_date: pd.Timestamp, end_date: pd.Timestamp) -> pd.DatetimeIndex:
