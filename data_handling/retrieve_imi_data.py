@@ -14,7 +14,7 @@ from tqdm import tqdm
 def main():
 
     start_date = pd.Timestamp(2019, 6, 11)
-    end_date = pd.Timestamp(2019, 6, 11)
+    end_date = pd.Timestamp(2019, 6, 13)
     username = "simon.sommer@student.unisg.ch"
 
     # retrieve and download all IMI files between start_date and end_date
@@ -29,29 +29,28 @@ def get_IMI_data(start_date: pd.Timestamp, end_date: pd.Timestamp, username: str
 
     weekdays = get_weekday_dates(start_date, end_date)
 
-    home = os.path.expanduser("~")
-    data_path = f"{home}/data/ITCH_market_data/zipped"
+    data_path = Path.home() / "data/ITCH_market_data/zipped"
     os.makedirs(data_path, exist_ok=True)
 
     for timestamp in tqdm(weekdays):
 
         month = str(timestamp.month).rjust(2, '0')
         filename = f"ITCHTV-P01_{str(timestamp.date()).replace('-', '_')}.bin.gz"
-        filepath = Path(os.path.join(data_path, filename))
+        filepath = data_path / filename
 
-        if filepath.with_suffix('').exists():
+        if filepath.exists():
+            tqdm.write(f"File {filepath.name} already exists, skipping")
             continue
 
         # download the file
-        curl_data(filename, filepath, month, username=username, password=password)
+        curl_data(filepath, month, username=username, password=password)
+        tqdm.write(f"File saved to: {filepath}")
 
-        tqdm.write(f"File saved to:\n{filepath}\n")
 
-
-def curl_data(filename: str, filepath: Path, month: str, username: str, password: str):
+def curl_data(filepath: Path, month: str, username: str, password: str):
     """
     """
-    url = f"https://www.exfeed.com/client_area/download/imi/{month}/{filename}"
+    url = f"https://www.exfeed.com/client_area/download/imi/{month}/{filepath.name}"
 
     response = requests.get(url, auth=(username, password), stream=True)
 
