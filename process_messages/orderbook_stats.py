@@ -35,8 +35,10 @@ class SingleDayIMIData(object):
         self.unpack = struct.unpack
         self.get_order_info = itemgetter("orderbook_no", "book_side", "price", "quantity_outstanding")
 
-        self.Statistics = namedtuple("Statistics", ["best_bid", "best_ask"])
+        self.transactions = defaultdict(dict)
+        self.Transaction = namedtuple("Transaction", ["price", "best_bid", "best_ask"])
         self.orderbook_stats = defaultdict(dict)
+        self.OrderbookState = namedtuple("OrderbookState", ["best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"])
 
         # Reading the binary file into memory
         with open(self.file_path, "rb") as binary_file:
@@ -104,13 +106,14 @@ class SingleDayIMIData(object):
             elif message_type == b"T":
                 message = self.unpack(">i", message)
                 seconds = message[0]
+                self.microseconds = int(seconds * 1e6)
                 if seconds >= 9.5 * 3600 and seconds < 17 * 3600:
                     for orderbook_no in self.blue_chip_orderbooks:
                         this_orderbook = self.orderbooks[orderbook_no]
                         best_bid_price, best_bid_quantity = this_orderbook[b'B'].peekitem(0)
                         best_ask_price, best_ask_quantity = this_orderbook[b'S'].peekitem(0)
-                        self.orderbook_stats[orderbook_no][seconds] = self.Statistics(best_bid=best_bid_price, best_ask=best_ask_price,
-                            buy_depth=best_bid_quantity, sell_depth=best_ask_quantity)
+                        self.orderbook_stats[orderbook_no][seconds] = self.OrderbookState(best_bid=best_bid_price, best_ask=best_ask_price,
+                            best_bid_quantity=best_bid_quantity, best_ask_quantity=best_ask_quantity)
 
             # Order Delete Message
             elif message_type == b"D":
@@ -160,21 +163,29 @@ class SingleDayIMIData(object):
             # Order Executed Message
             elif message_type == b"E":
                 message = self.unpack(">iqiq", message)
-                # timestamp = self.microseconds + message[0] * 1e-3
+                timestamp = self.microseconds + int(message[0] * 1e-3)
                 order_no = message[1]
                 executed_quantity = message[2]
                 match_number = message[3]
                 # update the order entry
                 this_order = self.orders[order_no]
                 this_order["quantity_outstanding"] -= executed_quantity
-                # update the order book
-                orderbook_no, book_side, price, _ = self.get_order_info(this_order)
+                # order book
+                orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(this_order)
                 if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
+                    this_orderbook = self.orderbooks[orderbook_no]
+                    if timestamp >= 9.5 * 3600e6 and timestamp < 17 * 3600e6:
+                        # calculate effective spreads
+                        best_bid_price, _ = this_orderbook[b'B'].peekitem(0)
+                        best_ask_price, _ = this_orderbook[b'S'].peekitem(0)
+                        self.transactions[orderbook_no][timestamp] = self.Transaction(price=price,
+                            best_bid=best_bid_price, best_ask=best_ask_price)
+                    # update order book
+                    this_orderbook = this_orderbook[book_side]
                     this_orderbook[price] -= executed_quantity
                     if this_orderbook[price] == 0:
                         this_orderbook.pop(price)
-                if this_order["quantity_outstanding"] == 0:
+                if quantity_outstanding == 0:
                     self.orders.pop(order_no)
 
             # Order Executed With Price message
@@ -205,8 +216,9 @@ class SingleDayIMIData(object):
                 # timestamp = self.microseconds + message[0] * 1e-3
                 price_tick_table_id = message[1]
                 this_tick_size_table = self.price_tick_sizes[price_tick_table_id]
-                this_tick_size_table["tick_size"] = message[2]
-                this_tick_size_table["price_start"] = message[2]
+                # price_tick_size = message[2]
+                # price_start = message[3]
+                this_tick_size_table[message[2]] = message[3]
 
             # Quantity Tick Size message
             elif message_type == b"M":

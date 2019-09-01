@@ -22,8 +22,7 @@ def unzip_files(zipped_directory: str, new_directory: str):
 
     os.makedirs(new_directory, exist_ok=True)
 
-    zipped_filenames = [path.name for path in zipped_directory.glob("*.gz")]
-    existing_paths = [path for path in zipped_directory.glob("*") if path.is_file()]
+    zipped_filenames = sorted([path.name for path in zipped_directory.glob("*.gz")])
 
     for this_filename in tqdm(zipped_filenames):
 
