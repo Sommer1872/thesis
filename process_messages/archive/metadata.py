@@ -28,7 +28,9 @@ class SingleDayIMIData(object):
         self.orders = defaultdict(dict)
         self.orderbooks = defaultdict(dict)
         self.blue_chip_orderbooks = list()
-        self.get_order_info = itemgetter("orderbook", "order_verb", "order_entry_price", "order_quantity_outstanding")
+        self.get_order_info = itemgetter(
+            "orderbook", "order_verb", "order_entry_price", "order_quantity_outstanding"
+        )
 
         self.metadata = defaultdict(dict)
         self.message_times = defaultdict(list)
@@ -38,7 +40,6 @@ class SingleDayIMIData(object):
             self.data = binary_file.read()
         self.number_of_bytes = len(self.data)
 
-
     def process_messages(self):
         """Convert and process all messages inside a loop"""
 
@@ -46,7 +47,9 @@ class SingleDayIMIData(object):
         while self.current_position < self.number_of_bytes:
 
             message_length = self.data[self.current_position + 1]
-            message_type = self.data[self.current_position + 2:self.current_position + 3]
+            message_type = self.data[
+                self.current_position + 2 : self.current_position + 3
+            ]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2
 
@@ -56,7 +59,10 @@ class SingleDayIMIData(object):
             if message_type == b"T":
                 message = unpack(">i", message)
                 self.microseconds = int(message[0] * 1e6)
-                if self.microseconds >= 9.5 * 3600e6 and self.microseconds < 17 * 3600e6:
+                if (
+                    self.microseconds >= 9.5 * 3600e6
+                    and self.microseconds < 17 * 3600e6
+                ):
                     self.message_times[message_type].append(self.microseconds)
 
             # Orderbook Directory message
@@ -165,4 +171,3 @@ class SingleDayIMIData(object):
 
             # elif message_type == b"G":  # not relevant
             #     pass
-

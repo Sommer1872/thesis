@@ -35,8 +35,8 @@ def unzip_files(zipped_directory: str, new_directory: str):
             continue
 
         # unzip it and save binary file
-        with gzip.open(this_filepath, 'rb') as f_in:
-            with open(new_filepath, 'wb') as f_out:
+        with gzip.open(this_filepath, "rb") as f_in:
+            with open(new_filepath, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
         tqdm.write(f"File unzipped and saved to {new_filepath}")

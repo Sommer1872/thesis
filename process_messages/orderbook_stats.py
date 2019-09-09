@@ -5,13 +5,13 @@
 # standard libraries
 from collections import defaultdict, namedtuple
 from operator import neg, itemgetter
+from pathlib import Path
 from sortedcontainers import SortedDict
 import struct
 
 # third-party packages
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 
 class OrderBookSide(SortedDict):
@@ -22,8 +22,9 @@ class OrderBookSide(SortedDict):
 class SingleDayIMIData(object):
     """Class that loads and processes IMI messages for a single date"""
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: Path):
         self.file_path = file_path
+        self.date = file_path.name[11:21].replace("_", "-")
         self.current_position = 0
 
         self.orders = defaultdict(dict)
@@ -33,12 +34,19 @@ class SingleDayIMIData(object):
         self.metadata = defaultdict(dict)
 
         self.unpack = struct.unpack
-        self.get_order_info = itemgetter("orderbook_no", "book_side", "price", "quantity_outstanding")
+        self.get_order_info = itemgetter(
+            "orderbook_no", "book_side", "price", "quantity_outstanding"
+        )
 
         self.transactions = defaultdict(dict)
         self.Transaction = namedtuple("Transaction", ["price", "best_bid", "best_ask"])
         self.orderbook_stats = defaultdict(dict)
-        self.OrderbookState = namedtuple("OrderbookState", ["best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"])
+        self.OrderbookState = namedtuple(
+            "OrderbookState",
+            ["best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"],
+        )
+        self.best_bid_ask = defaultdict(dict)
+        self.NewBest = namedtuple("NewBest", ["book_side", "new_best_price"])
 
         # Reading the binary file into memory
         with open(self.file_path, "rb") as binary_file:
@@ -48,23 +56,26 @@ class SingleDayIMIData(object):
     def process_messages(self):
         """Convert and process all messages inside a loop"""
 
-        # first check if we are at the end of the file, if so: stop
+        # as long as we haven't reached the end of the file:
         while self.current_position < self.number_of_bytes:
 
             message_length = self.data[self.current_position + 1]
-            message_type = self.data[self.current_position + 2:self.current_position + 3]
+            message_type = self.data[
+                self.current_position + 2 : self.current_position + 3
+            ]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2
-
+            # access the message
             message = self.data[message_start:message_end]
 
             # Add Order Message
             if message_type == b"A":
                 message = self.unpack(">iqsiii", message)
-                orderbook_no = message[4]
+                timestamp = self.microseconds + int(message[0] * 1e-3)
                 order_no = message[1]
                 book_side = message[2]
                 quantity = message[3]
+                orderbook_no = message[4]
                 price = message[5]
                 this_order = self.orders[order_no]
                 this_order["orderbook_no"] = orderbook_no
@@ -74,7 +85,162 @@ class SingleDayIMIData(object):
 
                 if orderbook_no in self.blue_chip_orderbooks:
                     # update the side of the orderbook_no
-                    self.orderbooks[orderbook_no][book_side][price] += quantity
+                    this_orderbook = self.orderbooks[orderbook_no][book_side]
+                    this_orderbook[price] += quantity
+                    # record if new best bid/ask
+                    if this_orderbook.peekitem(0)[1] == quantity:
+                        self.best_bid_ask[orderbook_no][timestamp] = self.NewBest(
+                            book_side=book_side, new_best_price=price
+                        )
+
+            # Time Stamp – Seconds message
+            elif message_type == b"T":
+                message = self.unpack(">i", message)
+                seconds = message[0]
+                self.microseconds = int(seconds * 1e6)
+                if seconds >= 9.5 * 3600 and seconds < 17 * 3600:
+                    for orderbook_no in self.blue_chip_orderbooks:
+                        this_orderbook = self.orderbooks[orderbook_no]
+                        best_bid_price, best_bid_quantity = this_orderbook[
+                            b"B"
+                        ].peekitem(0)
+                        best_ask_price, best_ask_quantity = this_orderbook[
+                            b"S"
+                        ].peekitem(0)
+                        self.orderbook_stats[orderbook_no][
+                            seconds
+                        ] = self.OrderbookState(
+                            best_bid=best_bid_price,
+                            best_ask=best_ask_price,
+                            best_bid_quantity=best_bid_quantity,
+                            best_ask_quantity=best_ask_quantity,
+                        )
+
+            # Order Delete Message
+            elif message_type == b"D":
+                message = self.unpack(">iq", message)
+                timestamp = self.microseconds + int(message[0] * 1e-3)
+                order_no = message[1]
+                this_order = self.orders[order_no]
+                # update the order book
+                orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
+                    this_order
+                )
+                if orderbook_no in self.blue_chip_orderbooks:
+                    this_orderbook = self.orderbooks[orderbook_no][book_side]
+                    this_orderbook[price] -= quantity_outstanding
+                    if this_orderbook[price] == 0:
+                        # check if price was at best
+                        if this_orderbook.index(price) == 0:
+                            best_price = this_orderbook.peekitem(1)[0]
+                            self.best_bid_ask[orderbook_no][timestamp] = self.NewBest(
+                                book_side=book_side, new_best_price=best_price
+                            )
+                        this_orderbook.pop(price)
+                # remove order
+                self.orders.pop(order_no)
+
+            # Order Replace Message
+            elif message_type == b"U":
+                message = self.unpack(">iqqii", message)
+                timestamp = self.microseconds + int(message[0] * 1e-3)
+                old_order_no = message[1]
+                old_order = self.orders[old_order_no]
+                new_order_no = message[2]
+                new_order = self.orders[new_order_no]
+                quantity = message[3]
+                price = message[4]
+                book_side = old_order["book_side"]
+                orderbook_no = old_order["orderbook_no"]
+                new_order["book_side"] = book_side
+                new_order["quantity_outstanding"] = quantity
+                new_order["orderbook_no"] = orderbook_no
+                new_order["price"] = price
+
+                # adjust orderbook
+                this_orderbook = self.orderbooks[orderbook_no][book_side]
+                if orderbook_no in self.blue_chip_orderbooks:
+                    # new order
+                    this_orderbook[price] += quantity
+                    # record if new best bid/ask
+                    if this_orderbook.peekitem(0)[1] == quantity:
+                        self.best_bid_ask[orderbook_no][timestamp] = self.NewBest(
+                            book_side=book_side, new_best_price=price
+                        )
+                    # old order
+                    old_order_price = old_order["price"]
+                    this_orderbook[old_order_price] -= old_order["quantity_outstanding"]
+                    if this_orderbook[old_order_price] == 0:
+                        # check if price was at best
+                        if this_orderbook.index(old_order_price) == 0:
+                            best_price = this_orderbook.peekitem(1)[0]
+                            self.best_bid_ask[orderbook_no][timestamp] = self.NewBest(
+                                book_side=book_side, new_best_price=best_price
+                            )
+                        this_orderbook.pop(old_order_price)
+                # remove old order
+                self.orders.pop(old_order_no)
+
+            # Order Executed Message
+            elif message_type == b"E":
+                message = self.unpack(">iqiq", message)
+                timestamp = self.microseconds + int(message[0] * 1e-3)
+                order_no = message[1]
+                executed_quantity = message[2]
+                match_number = message[3]
+                # update the order entry
+                this_order = self.orders[order_no]
+                this_order["quantity_outstanding"] -= executed_quantity
+                # order book
+                orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
+                    this_order
+                )
+                if orderbook_no in self.blue_chip_orderbooks:
+                    this_orderbook = self.orderbooks[orderbook_no]
+                    if timestamp >= 9.5 * 3600e6 and timestamp < 17 * 3600e6:
+                        # need this info to calculate effective spreads
+                        best_bid_price, _ = this_orderbook[b"B"].peekitem(0)
+                        best_ask_price, _ = this_orderbook[b"S"].peekitem(0)
+                        self.transactions[orderbook_no][timestamp] = self.Transaction(
+                            price=price,
+                            best_bid=best_bid_price,
+                            best_ask=best_ask_price,
+                        )
+                    # update order book
+                    this_orderbook = this_orderbook[book_side]
+                    this_orderbook[price] -= executed_quantity
+                    if this_orderbook[price] == 0:
+                        # record if new best bid/ask
+                        if this_orderbook.index(price) == 0:
+                            best_price = this_orderbook.peekitem(1)[0]
+                            self.best_bid_ask[orderbook_no][timestamp] = self.NewBest(
+                                book_side=book_side, new_best_price=best_price
+                            )
+                        this_orderbook.pop(price)
+                if quantity_outstanding == 0:
+                    self.orders.pop(order_no)
+
+            # Order Executed With Price message
+            elif message_type == b"C":
+                message = self.unpack(">iqiqsi", message)
+                # timestamp = self.microseconds + message[0] * 1e-3
+                order_no = message[1]
+                executed_quantity = message[2]
+                # match_number = message[3]
+                # printable = message[4]
+                # execution_price = message[5]
+                # update the order entry
+                this_order = self.orders[order_no]
+                orderbook_no, book_side, price, _ = self.get_order_info(this_order)
+                this_order["quantity_outstanding"] -= executed_quantity
+                # update the order book
+                if orderbook_no in self.blue_chip_orderbooks:
+                    this_orderbook = self.orderbooks[orderbook_no][book_side]
+                    this_orderbook[price] -= executed_quantity
+                    if this_orderbook[price] == 0:
+                        this_orderbook.pop(price)
+                if this_order["quantity_outstanding"] == 0:
+                    self.orders.pop(order_no)
 
             # Orderbook Directory message
             elif message_type == b"R":
@@ -101,114 +267,6 @@ class SingleDayIMIData(object):
                     this_metadata["price_decimals"] = message[9]
                     this_metadata["delisting_date"] = message[10]
                     this_metadata["delisting_time"] = message[11]
-
-            # Time Stamp – Seconds message
-            elif message_type == b"T":
-                message = self.unpack(">i", message)
-                seconds = message[0]
-                self.microseconds = int(seconds * 1e6)
-                if seconds >= 9.5 * 3600 and seconds < 17 * 3600:
-                    for orderbook_no in self.blue_chip_orderbooks:
-                        this_orderbook = self.orderbooks[orderbook_no]
-                        best_bid_price, best_bid_quantity = this_orderbook[b'B'].peekitem(0)
-                        best_ask_price, best_ask_quantity = this_orderbook[b'S'].peekitem(0)
-                        self.orderbook_stats[orderbook_no][seconds] = self.OrderbookState(best_bid=best_bid_price, best_ask=best_ask_price,
-                            best_bid_quantity=best_bid_quantity, best_ask_quantity=best_ask_quantity)
-
-            # Order Delete Message
-            elif message_type == b"D":
-                message = self.unpack(">iq", message)
-                order_no = message[1]
-                this_order = self.orders[order_no]
-                # update the order book
-                orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(this_order)
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
-                    this_orderbook[price] -= quantity_outstanding
-                    if this_orderbook[price] == 0:
-                        this_orderbook.pop(price)
-                # remove order
-                self.orders.pop(order_no)
-
-            # Order Replace Message
-            elif message_type == b"U":
-                message = self.unpack(">iqqii", message)
-                # timestamp = self.microseconds + message[0] * 1e-3
-                old_order_no = message[1]
-                old_order = self.orders[old_order_no]
-                new_order_no = message[2]
-                new_order = self.orders[new_order_no]
-                order_quantity = message[3]
-                price = message[4]
-                book_side = old_order["book_side"]
-                orderbook_no = old_order["orderbook_no"]
-                new_order["book_side"] = book_side
-                new_order["quantity_outstanding"] = order_quantity
-                new_order["orderbook_no"] = orderbook_no
-                new_order["price"] = price
-
-                # adjust orderbook
-                this_orderbook = self.orderbooks[orderbook_no][book_side]
-                if orderbook_no in self.blue_chip_orderbooks:
-                    # new order
-                    this_orderbook[price] += order_quantity
-                    # old order
-                    old_order_price = old_order["price"]
-                    this_orderbook[old_order_price] -= old_order["quantity_outstanding"]
-                    if this_orderbook[old_order_price] == 0:
-                        this_orderbook.pop(old_order_price)
-                # remove old order
-                self.orders.pop(old_order_no)
-
-            # Order Executed Message
-            elif message_type == b"E":
-                message = self.unpack(">iqiq", message)
-                timestamp = self.microseconds + int(message[0] * 1e-3)
-                order_no = message[1]
-                executed_quantity = message[2]
-                match_number = message[3]
-                # update the order entry
-                this_order = self.orders[order_no]
-                this_order["quantity_outstanding"] -= executed_quantity
-                # order book
-                orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(this_order)
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no]
-                    if timestamp >= 9.5 * 3600e6 and timestamp < 17 * 3600e6:
-                        # calculate effective spreads
-                        best_bid_price, _ = this_orderbook[b'B'].peekitem(0)
-                        best_ask_price, _ = this_orderbook[b'S'].peekitem(0)
-                        self.transactions[orderbook_no][timestamp] = self.Transaction(price=price,
-                            best_bid=best_bid_price, best_ask=best_ask_price)
-                    # update order book
-                    this_orderbook = this_orderbook[book_side]
-                    this_orderbook[price] -= executed_quantity
-                    if this_orderbook[price] == 0:
-                        this_orderbook.pop(price)
-                if quantity_outstanding == 0:
-                    self.orders.pop(order_no)
-
-            # Order Executed With Price message
-            elif message_type == b"C":
-                message = self.unpack(">iqiqsi", message)
-                # timestamp = self.microseconds + message[0] * 1e-3
-                order_no = message[1]
-                executed_quantity = message[2]
-                # match_number = message[3]
-                # printable = message[4]
-                # execution_price = message[5]
-                # update the order entry
-                this_order = self.orders[order_no]
-                orderbook_no, book_side, price, _ = self.get_order_info(this_order)
-                this_order["quantity_outstanding"] -= executed_quantity
-                # update the order book
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
-                    this_orderbook[price] -= executed_quantity
-                    if this_orderbook[price] == 0:
-                        this_orderbook.pop(price)
-                if this_order["quantity_outstanding"] == 0:
-                    self.orders.pop(order_no)
 
             # Price Tick Size message
             elif message_type == b"L":

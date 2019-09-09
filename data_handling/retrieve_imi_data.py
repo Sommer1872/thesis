@@ -25,7 +25,7 @@ def get_IMI_data(start_date: pd.Timestamp, end_date: pd.Timestamp, username: str
     """
     """
     print(f"\nUser: {username}")
-    password = getpass.getpass('Please enter password here and confirm with <ENTER>')
+    password = getpass.getpass("Please enter password here and confirm with <ENTER>")
 
     weekdays = get_weekday_dates(start_date, end_date)
 
@@ -34,7 +34,7 @@ def get_IMI_data(start_date: pd.Timestamp, end_date: pd.Timestamp, username: str
 
     for timestamp in tqdm(weekdays):
 
-        month = str(timestamp.month).rjust(2, '0')
+        month = str(timestamp.month).rjust(2, "0")
         filename = f"ITCHTV-P01_{str(timestamp.date()).replace('-', '_')}.bin.gz"
         filepath = data_path / filename
 
@@ -55,7 +55,7 @@ def curl_data(filepath: Path, month: str, username: str, password: str):
     response = requests.get(url, auth=(username, password), stream=True)
 
     if response.status_code == 200:
-        with open(filepath, 'wb') as file_handler:
+        with open(filepath, "wb") as file_handler:
             response.raw.decode_content = True
             shutil.copyfileobj(response.raw, file_handler)
 
@@ -63,7 +63,9 @@ def curl_data(filepath: Path, month: str, username: str, password: str):
         raise ValueError("response.status.code was not == 200")
 
 
-def get_weekday_dates(start_date: pd.Timestamp, end_date: pd.Timestamp) -> pd.DatetimeIndex:
+def get_weekday_dates(
+    start_date: pd.Timestamp, end_date: pd.Timestamp
+) -> pd.DatetimeIndex:
     """
     :return: a pandas index (iterable) of datetimes that contains dates from start_date till end_date
     """
