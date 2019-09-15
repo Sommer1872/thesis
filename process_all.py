@@ -29,12 +29,11 @@ def main():
     start_time = time.time()
     print(f"Processing {len(binary_files)} dates (1 file per date)")
     results = load_and_process_all(binary_files)
-    print(
-        f"It took {round(time.time() - start_time, 2)} seconds to process {len(binary_files)} dates"
-    )
+    print(f"It took {round(time.time() - start_time, 2)} seconds to process {len(binary_files)} dates")
 
     timestamp = str(pd.Timestamp("today"))
-    with open(f"results_{timestamp}.pickle", "wb") as pickle_file:
+    os.makedirs("results", exist_ok=True)
+    with open(f"results/results_{timestamp}.pickle", "wb") as pickle_file:
         pickle.dump(results, pickle_file)
 
 
