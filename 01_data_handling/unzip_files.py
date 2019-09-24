@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retrieves historical data from SIX IMI data feed
+"""Unzips files and saves them to another location
 """
 import os
 import gzip
@@ -12,8 +12,8 @@ from tqdm import tqdm
 def main():
 
     home = os.path.expanduser("~")
-    zipped_path = Path(f"{home}/data/ITCH_market_data/zipped")
-    binary_path = Path(f"{home}/data/ITCH_market_data/binary")
+    zipped_path = Path.home() / "data/ITCH_market_data/zipped"
+    binary_path = Path.home() / "data/ITCH_market_data/binary"
 
     unzip_files(zipped_path, binary_path)
 
@@ -22,19 +22,18 @@ def unzip_files(zipped_directory: str, new_directory: str):
 
     os.makedirs(new_directory, exist_ok=True)
 
-    zipped_filenames = sorted([path.name for path in zipped_directory.glob("*.gz")])
+    zipped_filepaths = sorted([path for path in zipped_directory.glob("*.gz")])
 
-    for this_filename in tqdm(zipped_filenames):
+    for this_filepath in tqdm(zipped_filepaths):
 
-        this_filepath = zipped_directory / this_filename
-        new_filename = this_filename.replace(".gz", "")
+        new_filename = this_filepath.stem
         new_filepath = new_directory / new_filename
 
         if Path.exists(new_filepath):
             tqdm.write(f"Path {new_filepath} already exists, skipped")
             continue
 
-        # unzip it and save binary file
+        # unzip it and save new file
         with gzip.open(this_filepath, "rb") as f_in:
             with open(new_filepath, "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)

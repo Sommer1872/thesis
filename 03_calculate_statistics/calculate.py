@@ -28,10 +28,13 @@ def calculate_orderbook_stats(this_day_imi_data):
 
     all_orderbook_stats = dict()
     all_transaction_stats = dict()
+    all_price_impact_stats = dict()
 
     # next, we process the orderbook for each stock:
     for orderbook_no in metadata.index:
         price_decimals = 10 ** metadata.loc[orderbook_no].price_decimals
+
+        # quoted spreads
         stats = pd.DataFrame.from_dict(this_day_imi_data.orderbook_stats[orderbook_no], orient="index")
         stats = stats.loc[int(start_microsecond*1e-6):int(end_microsecond*1e-6)]
         stats["quoted_spread"] = stats["best_ask"] - stats["best_bid"]
@@ -60,8 +63,7 @@ def calculate_orderbook_stats(this_day_imi_data):
         conditions = [(transactions.price.values >= step.price_start) &
                       (transactions.price.values < step.price_end) for step in tick_sizes[["price_start", "price_end"]].itertuples()]
         transactions["tick_size"] = np.piecewise(np.zeros(transactions.shape[0]), conditions, tick_sizes.tick_size.values)
-        transactions["spread_leeway"] = transactions["effective_spread"] / transactions["tick_size"]
-
+        transactions["spread_leeway"] = round(transactions["effective_spread"] / transactions["tick_size"] - 1)
         all_transaction_stats[orderbook_no] = transactions.describe()
 
-    return this_day_imi_data.date, all_orderbook_stats, all_transaction_stats, metadata
+    return this_day_imi_data.date, all_orderbook_stats, all_transaction_stats, all_price_impact_stats, metadata

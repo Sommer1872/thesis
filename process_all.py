@@ -37,21 +37,16 @@ def main():
         pickle.dump(results, pickle_file)
 
 
+def load_and_process_all(zip_file_paths: List[Path]) -> List[tuple]:
+    with Pool(processes=os.cpu_count() - 1) as pool:
+        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, zip_file_paths), total=len(file_paths)))
+    return results
+
+
 def load_and_process_orderbook_stats(file_path: Path):
     this_day_imi_data = SingleDayIMIData(file_path)
     this_day_imi_data.process_messages()
     results = calculate_orderbook_stats(this_day_imi_data)
-    return results
-
-
-def load_and_process_all(binary_files: Dict[str, Path]):
-    file_paths = binary_files.values()
-    results = list()
-    with Pool(processes=os.cpu_count() - 1) as pool:
-        for result in tqdm(
-            pool.imap_unordered(load_and_process_orderbook_stats, file_paths)
-        ):
-            results.append(result)
     return results
 
 
