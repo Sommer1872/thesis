@@ -10,7 +10,7 @@ from pathlib import Path
 import pickle
 import sys
 import time
-from typing import Dict, List
+from typing import Dict, List, Iterator
 
 # third-party packages
 import pandas as pd
@@ -23,13 +23,12 @@ from calculate_statistics.calculate import calculate_orderbook_stats
 def main():
 
     data_path = Path.home() / "data/ITCH_market_data/binary"
-    keep_dates = ["2018-07-11", "2018-07-12"]
-    binary_files = get_files(data_path, keep_dates)
+    binary_file_paths = data_path.glob("*.bin")
 
     start_time = time.time()
-    print(f"Processing {len(binary_files)} dates (1 file per date)")
-    results = load_and_process_all(binary_files)
-    print(f"It took {round(time.time() - start_time, 2)} seconds to process {len(binary_files)} dates")
+    print(f"Processing {len(binary_file_paths)} dates (1 file per date)")
+    results = load_and_process_all(binary_file_paths)
+    print(f"It took {round(time.time() - start_time, 2)} seconds to process {len(binary_file_paths)} dates")
 
     timestamp = str(pd.Timestamp("today"))
     os.makedirs("results", exist_ok=True)
@@ -37,9 +36,9 @@ def main():
         pickle.dump(results, pickle_file)
 
 
-def load_and_process_all(zip_file_paths: List[Path]) -> List[tuple]:
+def load_and_process_all(file_paths: Iterator[Path]) -> List[tuple]:
     with Pool(processes=os.cpu_count() - 1) as pool:
-        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, zip_file_paths), total=len(file_paths)))
+        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths), total=len(file_paths)))
     return results
 
 
@@ -48,15 +47,6 @@ def load_and_process_orderbook_stats(file_path: Path):
     this_day_imi_data.process_messages()
     results = calculate_orderbook_stats(this_day_imi_data)
     return results
-
-
-def get_files(data_path: Path, keep_dates: List[str]) -> Dict[str, Path]:
-    binary_files = dict()
-    for file_path in data_path.glob("*.bin"):
-        this_date = file_path.name[-14:-4].replace("_", "-")
-        if this_date in keep_dates:
-            binary_files[this_date] = file_path
-    return binary_files
 
 
 if __name__ == "__main__":
