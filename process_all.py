@@ -26,9 +26,11 @@ def main():
     binary_file_paths = data_path.glob("*.bin")
 
     start_time = time.time()
-    print(f"Processing {len(binary_file_paths)} dates (1 file per date)")
+    num_files = len(list(data_path.glob("*.bin")))
+
+    print(f"Processing {num_files} dates (1 file per date)")
     results = load_and_process_all(binary_file_paths)
-    print(f"It took {round(time.time() - start_time, 2)} seconds to process {len(binary_file_paths)} dates")
+    print(f"It took {round(time.time() - start_time, 2)} seconds to process {num_files} dates")
 
     timestamp = str(pd.Timestamp("today"))
     os.makedirs("results", exist_ok=True)
@@ -38,7 +40,7 @@ def main():
 
 def load_and_process_all(file_paths: Iterator[Path]) -> List[tuple]:
     with Pool(processes=os.cpu_count() - 1) as pool:
-        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths), total=len(file_paths)))
+        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths)))
     return results
 
 
