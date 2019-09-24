@@ -22,7 +22,7 @@ from calculate_statistics.calculate import calculate_orderbook_stats
 
 def main():
 
-    data_path = Path.home() / "data/ITCH_market_data/binary"
+    data_path = Path.home() / "data/ITCH_market_data/unzipped"
     binary_file_paths = data_path.glob("*.bin")
 
     start_time = time.time()
