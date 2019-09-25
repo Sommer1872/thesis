@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 """
-
+from typing import Dict
 import sys
 
 sys.path.append("..")
@@ -9,7 +9,7 @@ sys.path.append("..")
 import numpy as np
 import pandas as pd
 
-def calculate_orderbook_stats(this_day_imi_data):
+def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
 
     start_microsecond = int(9.25 * 3600e6)
     end_microsecond = int(17.25 * 3600e6)
@@ -29,6 +29,7 @@ def calculate_orderbook_stats(this_day_imi_data):
     all_orderbook_stats = dict()
     all_transaction_stats = dict()
     all_price_impact_stats = dict()
+    all_time_weighted_stats = dict()
 
     # next, we process the orderbook for each stock:
     for orderbook_no in metadata.index:
@@ -63,7 +64,38 @@ def calculate_orderbook_stats(this_day_imi_data):
         conditions = [(transactions.price.values >= step.price_start) &
                       (transactions.price.values < step.price_end) for step in tick_sizes[["price_start", "price_end"]].itertuples()]
         transactions["tick_size"] = np.piecewise(np.zeros(transactions.shape[0]), conditions, tick_sizes.tick_size.values)
-        transactions["spread_leeway"] = round(transactions["effective_spread"] / transactions["tick_size"] - 1)
+        transactions["spread_leeway"] = round(transactions["effective_spread"] / transactions["tick_size"] - 1, 2)
         all_transaction_stats[orderbook_no] = transactions.describe()
 
-    return this_day_imi_data.date, all_orderbook_stats, all_transaction_stats, all_price_impact_stats, metadata
+        # best bid and ask
+        best_bid_ask = pd.DataFrame(this_day_imi_data.best_bid_ask[orderbook_no])
+        best_bid_ask.drop_duplicates(subset=["timestamp", "book_side"], inplace=True, keep="last")
+        # show bids/asks side by side
+        best_bid_ask = best_bid_ask.pivot(index="timestamp", columns="book_side", values="new_best_price")
+        best_bid_ask.columns = [col.decode("utf-8") for col in best_bid_ask.columns]
+        del best_bid_ask[" "]
+        # get prices in CHF
+        best_bid_ask = best_bid_ask / price_decimals
+        # remember cases when there are not orders on both sides of the order book
+        missing = best_bid_ask.isna().all(axis=1)
+        best_bid_ask.fillna(method="ffill", inplace=True)
+        # in missing cases from above, we set nan's to bid/ask/mid
+        best_bid_ask[missing] = np.nan
+        best_bid_ask["quoted_spread"] = best_bid_ask["S"] - best_bid_ask["B"]
+        best_bid_ask.reset_index(inplace=True)
+        best_bid_ask["time_validity"] = best_bid_ask["timestamp"].shift(-1) - best_bid_ask["timestamp"]
+        best_bid_ask.set_index("timestamp", drop=True, inplace=True)
+        # filter based on start / end time and get prices in CHF
+        best_bid_ask = best_bid_ask.loc[start_microsecond:end_microsecond]
+
+        time_weighted_quoted_spread = np.sum(best_bid_ask["quoted_spread"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
+        # best_bid_ask["mid_price"] = (best_bid_ask["B"] + best_bid_ask["S"]) * 0.5
+        all_time_weighted_stats[orderbook_no] = time_weighted_quoted_spread
+
+    results = dict("date": this_day_imi_data.date,
+        "all_orderbook_stats": all_orderbook_stats,
+        "all_transaction_stats": all_transaction_stats,
+        "all_time_weighted_stats": all_time_weighted_stats,
+        "metadata": metadata)
+
+    return results

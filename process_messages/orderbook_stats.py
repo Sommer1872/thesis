@@ -6,17 +6,22 @@
 from collections import defaultdict, namedtuple
 from operator import neg, itemgetter
 from pathlib import Path
-from sortedcontainers import SortedDict
 import struct
 
 # third-party packages
 import numpy as np
 import pandas as pd
+from sortedcontainers import SortedDict
 
 
 class OrderBookSide(SortedDict):
     def __missing__(self, key):
         return 0
+    def peekitem(self, index=-1):
+        try:
+            return super().peekitem(index)
+        except IndexError:
+            return (np.nan, np.nan)
 
 
 class SingleDayIMIData(object):
@@ -130,10 +135,7 @@ class SingleDayIMIData(object):
                     if this_orderbook[price] == 0:
                         # check if price was at best
                         if this_orderbook.index(price) == 0:
-                            try:
-                                best_price = this_orderbook.peekitem(1)[0]
-                            except IndexError:  # if there is nothing else in the order book
-                                best_price = np.inf
+                            best_price = this_orderbook.peekitem(1)[0]
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
                                 timestamp=timestamp,
                                 book_side=book_side,
@@ -179,10 +181,7 @@ class SingleDayIMIData(object):
                     if this_orderbook[old_order_price] == 0:
                         # check if price was at best
                         if this_orderbook.index(old_order_price) == 0:
-                            try:
-                                best_price = this_orderbook.peekitem(1)[0]
-                            except IndexError:  # if there is nothing else in the order book
-                                best_price = np.inf
+                            best_price = this_orderbook.peekitem(1)[0]
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
                                 timestamp=timestamp,
                                 book_side=book_side,
@@ -226,10 +225,7 @@ class SingleDayIMIData(object):
                     if this_orderbook[price] == 0:
                         # record if new best bid/ask
                         if this_orderbook.index(price) == 0:
-                            try:
-                                best_price = this_orderbook.peekitem(1)[0]
-                            except IndexError:  # if there is nothing else in the order book
-                                best_price = np.inf
+                            best_price = this_orderbook.peekitem(1)[0]
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
                                 timestamp=timestamp,
                                 book_side=book_side,
