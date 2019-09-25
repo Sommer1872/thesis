@@ -40,7 +40,6 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         stats = stats.loc[int(start_microsecond*1e-6):int(end_microsecond*1e-6)]
         stats["quoted_spread"] = stats["best_ask"] - stats["best_bid"]
         stats["mid"] = (stats["best_ask"] + stats["best_bid"]) * 0.5
-        stats["relative_quoted_spread_bps"] = 100 * stats["quoted_spread"] / stats["mid"]
         stats[["quoted_spread", "mid"]] /= price_decimals
         stats[["best_ask", "best_bid"]] = (stats[["best_ask", "best_bid"]] / price_decimals)
 
@@ -50,7 +49,6 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no]).set_index("timestamp")
         transactions = transactions.loc[start_microsecond:end_microsecond]
         transactions["mid"] = (transactions["best_ask"] + transactions["best_bid"]) * 0.5
-        transactions["relative_effective_spread_bps"] = 100 * 2 * np.abs(transactions["price"] - transactions["mid"]) / transactions["mid"]
         transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
         transactions["effective_spread"] = 2 * np.abs(transactions["price"] - transactions["mid"])
 
@@ -92,10 +90,10 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         # best_bid_ask["mid_price"] = (best_bid_ask["B"] + best_bid_ask["S"]) * 0.5
         all_time_weighted_stats[orderbook_no] = time_weighted_quoted_spread
 
-    results = dict("date": this_day_imi_data.date,
+    results = {"date": this_day_imi_data.date,
         "all_orderbook_stats": all_orderbook_stats,
         "all_transaction_stats": all_transaction_stats,
         "all_time_weighted_stats": all_time_weighted_stats,
-        "metadata": metadata)
+        "metadata": metadata}
 
     return results
