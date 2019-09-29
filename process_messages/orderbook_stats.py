@@ -46,9 +46,9 @@ class SingleDayIMIData(object):
         self.transactions = defaultdict(list)
         self.Transaction = namedtuple("Transaction", ["timestamp", "price", "size",
             "best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"])
-        self.orderbook_stats = defaultdict(dict)
-        self.OrderbookState = namedtuple(
-            "OrderbookState",
+        self.snapshots = defaultdict(dict)
+        self.Snapshot = namedtuple(
+            "Snapshot",
             ["best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"],
         )
         self.best_bid_ask = defaultdict(list)
@@ -112,7 +112,7 @@ class SingleDayIMIData(object):
                         this_orderbook = self.orderbooks[orderbook_no]
                         best_bid_price, best_bid_quantity = this_orderbook[b"B"].peekitem(0)
                         best_ask_price, best_ask_quantity = this_orderbook[b"S"].peekitem(0)
-                        self.orderbook_stats[orderbook_no][seconds] = self.OrderbookState(
+                        self.snapshots[orderbook_no][seconds] = self.Snapshot(
                             best_bid=best_bid_price,
                             best_ask=best_ask_price,
                             best_bid_quantity=best_bid_quantity,
@@ -189,7 +189,7 @@ class SingleDayIMIData(object):
                             ))
                         this_orderbook.pop(old_order_price)
                 # remove old order
-                self.orders.pop(old_order_no)
+                # self.orders.pop(old_order_no)
 
             # Order Executed Message
             elif message_type == b"E":

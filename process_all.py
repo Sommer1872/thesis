@@ -17,7 +17,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from process_messages.orderbook_stats import SingleDayIMIData
-from calculate_statistics.calculate import calculate_orderbook_stats
+from calculate_statistics.calculate_all import calculate_orderbook_stats
 
 
 def main():
