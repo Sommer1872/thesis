@@ -52,7 +52,12 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         all_snapshot_stats[orderbook_no] = calculate_snapshot_statistics(snapshots, metainfo)
 
         # transactions
-        transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no]).set_index("timestamp")
+        transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
+        try:
+            transactions.set_index("timestamp")
+        except KeyError:
+            # in case there are no transactions
+            continue
         transactions = transactions.loc[start_microsecond:end_microsecond]
         price_decimals = 10 ** metainfo.price_decimals
         transactions["mid"] = (transactions["best_ask"] + transactions["best_bid"]) * 0.5
