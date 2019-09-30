@@ -18,7 +18,6 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
     # keeping the last trade per high sampling frequency
     resampled_high_freq = transactions["mid"].resample(high_sampling_frequency, label="right", closed="right").last()
     # dealing with NaNs is important for return calculation below
-    # resampled_high_freq.fillna(method="ffill", inplace=True)
     resampled_high_freq.dropna(inplace=True)
     num_obs = resampled_high_freq.shape[0]
     # taking log of the mid price (and scaling by 100)
@@ -37,7 +36,6 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
     all_ns = list()
     for offset in offsets:
         resampled_low_freq = resampled_high_freq.resample(low_sampling_frequency, base=offset, label="right", closed="right").last()
-    #     resampled_low_freq.fillna(method="ffill", inplace=True)
         resampled_low_freq.dropna(inplace=True)
         resampled_low_freq = pd.DataFrame(resampled_low_freq)
 
@@ -53,7 +51,7 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
     n_bar = np.mean(all_ns)
 
     # combine both for two-scales RV
-    TSRV = RV_average - (n_bar / num_obs) * RV_all;
+    TSRV = RV_average - (n_bar / num_obs) * RV_all
     # small sample adjustment
     TSRV = 1 / (1 - n_bar / num_obs) * TSRV #/ sum(delta))
 

@@ -54,7 +54,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         # transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
         try:
-            transactions.set_index("timestamp")
+            transactions.set_index("timestamp", inplace=True)
         except KeyError:
             # in case there are no transactions
             continue

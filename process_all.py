@@ -25,17 +25,17 @@ def main():
     data_path = Path.home() / "data/ITCH_market_data/unzipped"
     binary_file_paths = data_path.glob("*.bin")
 
-    start_time = time.time()
     num_files = len(list(data_path.glob("*.bin")))
-
     print(f"Processing {num_files} dates (1 file per date)")
-    results = load_and_process_all(binary_file_paths)
-    print(f"It took {round(time.time() - start_time, 2)} seconds to process {num_files} dates")
 
-    timestamp = str(pd.Timestamp("today"))
+    results = load_and_process_all(binary_file_paths)
+
+    timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", " ")
     os.makedirs("results", exist_ok=True)
     with open(f"results/results_{timestamp}.pickle", "wb") as pickle_file:
         pickle.dump(results, pickle_file)
+
+    print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 
 
 def load_and_process_all(file_paths: Iterator[Path]) -> List[tuple]:
