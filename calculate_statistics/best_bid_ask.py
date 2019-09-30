@@ -10,6 +10,8 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, metainfo: pd.S
     price_decimals = 10 ** metainfo.price_decimals
 
     best_bid_ask.drop_duplicates(subset=["timestamp", "book_side"], inplace=True, keep="last")
+    # exclude market orders from our calculations
+    best_bid_ask = best_bid_ask[best_bid_ask["new_best_price"] != 2147483647]
     # show bids/asks side by side
     best_bid_ask = best_bid_ask.pivot(index="timestamp", columns="book_side", values="new_best_price")
     best_bid_ask.columns = [col.decode("utf-8") for col in best_bid_ask.columns]
@@ -25,6 +27,8 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, metainfo: pd.S
     # in missing cases from above, we set nan's to bid/ask/mid
     best_bid_ask[missing] = np.nan
     best_bid_ask["quoted_spread"] = best_bid_ask["S"] - best_bid_ask["B"]
+    best_bid_ask["mid"] = (best_bid_ask["S"] + best_bid_ask["B"]) * 0.5
+    best_bid_ask["relative_quoted_spread_bps"] = (best_bid_ask["quoted_spread"] / best_bid_ask["mid"]) * 100
     best_bid_ask.reset_index(inplace=True)
     best_bid_ask["time_validity"] = best_bid_ask["timestamp"].shift(-1) - best_bid_ask["timestamp"]
     best_bid_ask.set_index("timestamp", drop=True, inplace=True)
@@ -32,5 +36,6 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, metainfo: pd.S
     best_bid_ask = best_bid_ask.loc[start_microsecond:end_microsecond]
 
     time_weighted_quoted_spread = np.sum(best_bid_ask["quoted_spread"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
-    # best_bid_ask["mid_price"] = (best_bid_ask["b"] + best_bid_ask["s"]) * 0.5
-    return time_weighted_quoted_spread
+    time_weighted_relative_quoted_spread_bps = np.sum(best_bid_ask["relative_quoted_spread_bps"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
+    return dict(time_weighted_quoted_spread=time_weighted_quoted_spread,
+        time_weighted_relative_quoted_spread_bps=time_weighted_relative_quoted_spread_bps)

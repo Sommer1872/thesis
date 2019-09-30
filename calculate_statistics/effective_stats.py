@@ -7,6 +7,7 @@ import pandas as pd
 def calculate_effective_statistics(transactions: pd.DataFrame, metainfo:pd.Series, tick_sizes: pd.DataFrame) -> pd.DataFrame:
 
     transactions["effective_spread"] = 2 * np.abs(transactions["price"] - transactions["mid"])
+    transactions["relative_effective_spread_bps"] = (transactions["effective_spread"] / transactions["mid"]) * 100
 
     # spread leeway using tick sizes and an unequal join
     tick_sizes = tick_sizes.reset_index() / metainfo.price_decimals

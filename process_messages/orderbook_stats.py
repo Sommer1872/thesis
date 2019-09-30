@@ -132,8 +132,9 @@ class SingleDayIMIData(object):
                 if orderbook_no in self.blue_chip_orderbooks:
                     this_orderbook = self.orderbooks[orderbook_no][book_side]
                     this_orderbook[price] -= quantity_outstanding
+                    # if there is no quantity left at that price
                     if this_orderbook[price] == 0:
-                        # check if price was at best
+                        # if price was at best
                         if this_orderbook.index(price) == 0:
                             best_price = this_orderbook.peekitem(1)[0]
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
@@ -179,7 +180,7 @@ class SingleDayIMIData(object):
                     old_order_price = old_order["price"]
                     this_orderbook[old_order_price] -= old_order["quantity_outstanding"]
                     if this_orderbook[old_order_price] == 0:
-                        # check if price was at best
+                        # if price was at best
                         if this_orderbook.index(old_order_price) == 0:
                             best_price = this_orderbook.peekitem(1)[0]
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
@@ -307,6 +308,14 @@ class SingleDayIMIData(object):
             # update current position for next iteration
             self.current_position = message_end
 
+            # # System Event message
+            # elif message_type == b"S":
+            #     message = self.unpack(">i8ssi", message)
+            #     timestamp = self.microseconds + message[0] * 1e-3
+            #     group = message[1]
+            #     event_code = message[2]
+            #     orderbook_no = message[3]
+
             # # Indicative Price / Quantity Message
             # elif message_type == b"I":
             #     # message = self.unpack(">iqiiiis", message)
@@ -336,14 +345,6 @@ class SingleDayIMIData(object):
             #     orderbook_no = message[1]
             #     trading_state = message[2]
             #     book_condition = message[3]
-
-            # # System Event message
-            # elif message_type == b"S":
-            #     message = self.unpack(">i8ssi", message)
-            #     timestamp = self.microseconds + message[0] * 1e-3
-            #     group = message[1]
-            #     event_code = message[2]
-            #     orderbook_no = message[3]
 
             # elif message_type == b"G":  # not relevant
             #     pass

@@ -30,7 +30,7 @@ def main():
 
     results = load_and_process_all(binary_file_paths)
 
-    timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", " ")
+    timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", "-")
     os.makedirs("results", exist_ok=True)
     with open(f"results/results_{timestamp}.pickle", "wb") as pickle_file:
         pickle.dump(results, pickle_file)

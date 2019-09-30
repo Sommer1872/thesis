@@ -55,6 +55,9 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
     # small sample adjustment
     TSRV = 1 / (1 - n_bar / num_obs) * TSRV #/ sum(delta))
 
-    stats = dict(TSRV=TSRV, noise_var_TSRV=noise_var_TSRV, RV_slow=RV_slow)
+    Delta = 1 / num_obs
+    signal_to_noise = 2*noise_var_TSRV / (TSRV*Delta + 2*noise_var_TSRV)
+
+    stats = dict(TSRV=TSRV, noise_var_TSRV=noise_var_TSRV, RV_slow=RV_slow, signal_to_noise=signal_to_noise)
     return stats
 
