@@ -99,8 +99,8 @@ class SingleDayIMIData(object):
                         self.best_bid_ask[orderbook_no].append(self.NewBest(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_price=price
-                        ))
+                            new_best_price=price)
+                        )
 
             # Time Stamp – Seconds message
             elif message_type == b"T":
@@ -140,8 +140,8 @@ class SingleDayIMIData(object):
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
                                 timestamp=timestamp,
                                 book_side=book_side,
-                                new_best_price=best_price
-                            ))
+                                new_best_price=best_price)
+                            )
                         this_orderbook.pop(price)
                 # remove order
                 self.orders.pop(order_no)
@@ -186,8 +186,8 @@ class SingleDayIMIData(object):
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
                                 timestamp=timestamp,
                                 book_side=book_side,
-                                new_best_price=best_price
-                            ))
+                                new_best_price=best_price)
+                            )
                         this_orderbook.pop(old_order_price)
                 # remove old order
                 # self.orders.pop(old_order_no)
@@ -230,8 +230,8 @@ class SingleDayIMIData(object):
                             self.best_bid_ask[orderbook_no].append(self.NewBest(
                                 timestamp=timestamp,
                                 book_side=book_side,
-                                new_best_price=best_price
-                            ))
+                                new_best_price=best_price)
+                            )
                         this_orderbook.pop(price)
                 if quantity_outstanding == 0:
                     self.orders.pop(order_no)
