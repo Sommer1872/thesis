@@ -150,14 +150,20 @@ class SingleDayIMIData(object):
             elif message_type == b"U":
                 message = self.unpack(">iqqii", message)
                 timestamp = self.microseconds + int(message[0] * 1e-3)
+                # old order
                 old_order_no = message[1]
                 old_order = self.orders[old_order_no]
-                new_order_no = message[2]
-                new_order = self.orders[new_order_no]
-                quantity = message[3]
-                price = message[4]
+                old_order_price = old_order["price"]
+                old_quantity_outstanding = old_order["quantity_outstanding"]
                 book_side = old_order["book_side"]
                 orderbook_no = old_order["orderbook_no"]
+                self.orders.pop(old_order_no)
+                # new order
+                new_order_no = message[2]
+                quantity = message[3]
+                price = message[4]
+                # create new order entry
+                new_order = self.orders[new_order_no]
                 new_order["book_side"] = book_side
                 new_order["quantity_outstanding"] = quantity
                 new_order["orderbook_no"] = orderbook_no
@@ -166,19 +172,8 @@ class SingleDayIMIData(object):
                 # adjust orderbook
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
                 if orderbook_no in self.blue_chip_orderbooks:
-                    # new order
-                    this_orderbook[price] += quantity
-                    # record if new best bid/ask
-                    best_price, best_quantity = this_orderbook.peekitem(0)
-                    if (price == best_price) & (quantity == best_quantity):
-                        self.best_bid_ask[orderbook_no].append(self.NewBest(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_price=price
-                        ))
                     # old order
-                    old_order_price = old_order["price"]
-                    this_orderbook[old_order_price] -= old_order["quantity_outstanding"]
+                    this_orderbook[old_order_price] -= old_quantity_outstanding
                     if this_orderbook[old_order_price] == 0:
                         # if price was at best
                         if this_orderbook.index(old_order_price) == 0:
@@ -189,8 +184,16 @@ class SingleDayIMIData(object):
                                 new_best_price=best_price)
                             )
                         this_orderbook.pop(old_order_price)
-                # remove old order
-                # self.orders.pop(old_order_no)
+                    # new order
+                    this_orderbook[price] += quantity
+                    # record if new best bid/ask
+                    best_price, best_quantity = this_orderbook.peekitem(0)
+                    if (price == best_price) & (quantity == best_quantity):
+                        self.best_bid_ask[orderbook_no].append(self.NewBest(
+                            timestamp=timestamp,
+                            book_side=book_side,
+                            new_best_price=price
+                        ))
 
             # Order Executed Message
             elif message_type == b"E":
