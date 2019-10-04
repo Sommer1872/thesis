@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 
-def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, metainfo: pd.Series,
+def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, trading_actions: pd.DataFrame, metainfo: pd.Series,
     start_microsecond: int, end_microsecond: int) -> pd.DataFrame:
 
     price_decimals = 10 ** metainfo.price_decimals
@@ -34,6 +34,12 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, metainfo: pd.S
     best_bid_ask.set_index("timestamp", drop=True, inplace=True)
     # filter based on start / end time and get prices in chf
     best_bid_ask = best_bid_ask.loc[start_microsecond:end_microsecond]
+    # filter based on trading_actions
+    if not trading_actions.empty:
+        for _, event in trading_actions.iterrows():
+            best_bid_ask = best_bid_ask[(best_bid_ask.index < event.timestamp) | (best_bid_ask.index > event.until)]
+    # if there are still strange values, we remove them
+    best_bid_ask = best_bid_ask[best_bid_ask["quoted_spread"] >= 0]
 
     time_weighted_quoted_spread = np.sum(best_bid_ask["quoted_spread"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
     time_weighted_relative_quoted_spread_bps = np.sum(best_bid_ask["relative_quoted_spread_bps"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()

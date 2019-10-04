@@ -29,7 +29,7 @@ def get_IMI_data(start_date: pd.Timestamp, end_date: pd.Timestamp, username: str
 
     weekdays = get_weekday_dates(start_date, end_date)
 
-    data_path = Path.home() / "data/ITCH_market_data/zipped"
+    data_path = Path("/data/ITCH_market_data/zipped")
     os.makedirs(data_path, exist_ok=True)
 
     for timestamp in tqdm(weekdays):

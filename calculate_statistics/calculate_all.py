@@ -42,14 +42,23 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         tick_table_id = int(metainfo.price_tick_table_id)
         tick_sizes = pd.DataFrame.from_dict(this_day_imi_data.price_tick_sizes[tick_table_id], orient="index")
 
+        # trading actions
+        trading_actions = pd.DataFrame(this_day_imi_data.trading_actions[orderbook_no], columns=["timestamp", "trading_state", "book_condition"])
+        trading_actions = trading_actions[trading_actions["trading_state"] == b"T"]
+        if not trading_actions.empty:
+            trading_actions["until"] = trading_actions["timestamp"].shift(-1)
+            trading_actions = trading_actions[trading_actions["book_condition"] != b"N"]
+            trading_actions.dropna(subset=["until"], inplace=True)
+            trading_actions["until"] = trading_actions["until"].astype(int)
+
         # best bid and ask
         best_bid_ask = pd.DataFrame(this_day_imi_data.best_bid_ask[orderbook_no])
-        all_time_weighted_stats[orderbook_no] = calculate_best_bid_ask_statistics(best_bid_ask, metainfo, start_microsecond, end_microsecond)
+        all_time_weighted_stats[orderbook_no] = calculate_best_bid_ask_statistics(best_bid_ask, trading_actions, metainfo, start_microsecond, end_microsecond)
 
         # snapshots for quoted spreads
         snapshots = pd.DataFrame.from_dict(this_day_imi_data.snapshots[orderbook_no], orient="index")
         snapshots = snapshots.loc[int(start_microsecond*1e-6):int(end_microsecond*1e-6)]
-        all_snapshot_stats[orderbook_no] = calculate_snapshot_statistics(snapshots, metainfo)
+        all_snapshot_stats[orderbook_no] = calculate_snapshot_statistics(snapshots, trading_actions, metainfo)
 
         # transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])

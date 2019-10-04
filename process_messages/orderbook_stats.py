@@ -28,36 +28,37 @@ class SingleDayIMIData(object):
     """Class that loads and processes IMI messages for a single date"""
 
     def __init__(self, file_path: Path):
-        self.file_path = file_path
         self.date = file_path.name[11:21].replace("_", "-")
-        self.current_position = 0
 
-        self.orders = defaultdict(dict)
-        self.orderbooks = defaultdict(dict)
-        self.price_tick_sizes = defaultdict(dict)
-        self.blue_chip_orderbooks = list()
-        self.metadata = defaultdict(dict)
+        self.file_path = file_path
+        # Reading the binary file into memory
+        with open(self.file_path, "rb") as binary_file:
+            self.data = binary_file.read()
+        self.number_of_bytes = len(self.data)
+        self.current_position = 0
 
         self.unpack = struct.unpack
         self.get_order_info = itemgetter(
             "orderbook_no", "book_side", "price", "quantity_outstanding"
         )
 
+        self.orders = defaultdict(dict)
+        self.orderbooks = defaultdict(dict)
+        self.price_tick_sizes = defaultdict(dict)
+        self.metadata = defaultdict(dict)
+        self.snapshots = defaultdict(dict)
+
         self.transactions = defaultdict(list)
+        self.best_bid_ask = defaultdict(list)
+        self.trading_actions = defaultdict(list)
+        self.blue_chip_orderbooks = list()
+
         self.Transaction = namedtuple("Transaction", ["timestamp", "price", "size",
             "best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"])
-        self.snapshots = defaultdict(dict)
-        self.Snapshot = namedtuple(
-            "Snapshot",
-            ["best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"],
-        )
-        self.best_bid_ask = defaultdict(list)
+        self.Snapshot = namedtuple("Snapshot", ["best_bid", "best_ask",
+            "best_bid_quantity", "best_ask_quantity"])
         self.NewBest = namedtuple("NewBest", ["timestamp", "book_side", "new_best_price"])
 
-        # Reading the binary file into memory
-        with open(self.file_path, "rb") as binary_file:
-            self.data = binary_file.read()
-        self.number_of_bytes = len(self.data)
 
     def process_messages(self):
         """Convert and process all messages inside a loop"""
@@ -304,6 +305,15 @@ class SingleDayIMIData(object):
                 quantity_tick_table_id = message[1]
                 quantity_tick_size = message[2]
                 quantity_start = message[3]
+
+            # Orderbook Trading Action message
+            elif message_type == b"H":
+                message = self.unpack(">iiss", message)
+                timestamp = self.microseconds + int(message[0] * 1e-3)
+                orderbook_no = message[1]
+                trading_state = message[2]
+                book_condition = message[3]
+                self.trading_actions[orderbook_no].append((timestamp, trading_state, book_condition))
 
             else:
                 pass  # because message type is not relevant
