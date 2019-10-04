@@ -22,6 +22,8 @@ class SingleDayIMIData(object):
         self.current_position = 0
 
 
+        self.metadata = defaultdict(dict)
+        self.blue_chip_orderbooks = list()
         self.trading_actions = list()
         self.unpack = struct.unpack
 
@@ -60,7 +62,21 @@ class SingleDayIMIData(object):
                 orderbook_no = message[1]
                 trading_state = message[2]
                 book_condition = message[3]
-                self.trading_actions.append((trading_state, book_condition))
+
+                group = self.metadata[orderbook_no]["group"]
+                self.trading_actions.append((group, trading_state, book_condition))
+
+            # Orderbook Directory message
+            elif message_type == b"R":
+                message = self.unpack(">iis12s3s8siiiiii", message)
+
+                # initialize each side of the orderbook
+                orderbook_no = message[1]
+                group = message[5]
+                this_metadata = self.metadata[orderbook_no]
+                this_metadata["group"] = group
+                if group == b"ACoK    ":
+                    self.blue_chip_orderbooks.append(orderbook_no)
 
             else:
                 pass  # because message type is not relevant
