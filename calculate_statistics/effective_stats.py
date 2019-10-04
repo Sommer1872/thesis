@@ -10,9 +10,11 @@ def calculate_effective_statistics(transactions: pd.DataFrame, metainfo:pd.Serie
     transactions["relative_effective_spread_bps"] = (transactions["effective_spread"] / transactions["mid"]) * 100
 
     # spread leeway using tick sizes and an unequal join
-    tick_sizes = tick_sizes.reset_index() / metainfo.price_decimals
+    tick_sizes = tick_sizes.reset_index()
     tick_sizes.columns = ["tick_size", "price_start"]
     tick_sizes["price_end"] = tick_sizes["price_start"].shift(fill_value=np.inf)
+    price_decimals = 10 ** metainfo.price_decimals
+    tick_sizes /= price_decimals
     # unequal join
     conditions = [(transactions.price.values >= step.price_start) &
                   (transactions.price.values < step.price_end) for step in tick_sizes[["price_start", "price_end"]].itertuples()]

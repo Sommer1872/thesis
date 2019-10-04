@@ -38,7 +38,11 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
 
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:
+
         metainfo = metadata.loc[orderbook_no]
+        price_decimals = 10 ** metainfo.price_decimals
+
+        # tick sizes
         tick_table_id = int(metainfo.price_tick_table_id)
         tick_sizes = pd.DataFrame.from_dict(this_day_imi_data.price_tick_sizes[tick_table_id], orient="index")
 
@@ -68,7 +72,6 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
             # in case there are no transactions
             continue
         transactions = transactions.loc[start_microsecond:end_microsecond]
-        price_decimals = 10 ** metainfo.price_decimals
         transactions["mid"] = (transactions["best_ask"] + transactions["best_bid"]) * 0.5
         transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
 
