@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 def main():
 
-    zipped_dir = Path.home() / "data/ITCH_market_data/zipped"
+    zipped_dir = "/data/ITCH_market_data/zipped"
     zipped_filepaths = sorted([path for path in zipped_dir.glob("*.gz")])
     results = unzip_all(zipped_filepaths)
 
