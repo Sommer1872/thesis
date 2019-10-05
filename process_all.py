@@ -15,8 +15,9 @@ from typing import Dict, List, Iterator
 import pandas as pd
 from tqdm import tqdm
 
-from process_messages.orderbook_stats import SingleDayIMIData
 from calculate_statistics.calculate_all import calculate_orderbook_stats
+from process_messages.orderbook_stats import SingleDayIMIData
+from results.process_results import process_results
 
 
 def main():
@@ -25,14 +26,16 @@ def main():
     binary_file_paths = data_path.glob("*.bin")
 
     num_files = len(list(data_path.glob("*.bin")))
-    print(f"\nProcessing {num_files} dates...")
-
+    print(f"\nProcessing {num_files} trading days...")
     results = load_and_process_all(binary_file_paths)
+
+    print(f"\nProcessing results...")
+    results = process_results(results)
 
     timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", "-")
     os.makedirs("results", exist_ok=True)
-    with open(f"results/results_{timestamp}.pickle", "wb") as pickle_file:
-        pickle.dump(results, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    results.to_csv(f"results/{timestamp}", float_format="%g")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 
