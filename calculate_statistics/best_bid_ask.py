@@ -43,5 +43,5 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame, trading_action
 
     time_weighted_quoted_spread = np.sum(best_bid_ask["quoted_spread"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
     time_weighted_relative_quoted_spread_bps = np.sum(best_bid_ask["relative_quoted_spread_bps"] * best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
-    return dict(time_weighted_quoted_spread=time_weighted_quoted_spread,
-        time_weighted_relative_quoted_spread_bps=time_weighted_relative_quoted_spread_bps)
+    return {"time_weighted_quoted_spread": time_weighted_quoted_spread,
+    "time_weighted_relative_quoted_spread_bps": time_weighted_relative_quoted_spread_bps}

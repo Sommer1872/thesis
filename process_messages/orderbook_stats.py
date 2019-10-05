@@ -21,7 +21,7 @@ class OrderBookSide(SortedDict):
         try:
             return super().peekitem(index)
         except IndexError:
-            return (np.nan, np.nan)
+            return (np.nan, 0)
 
 
 class SingleDayIMIData(object):

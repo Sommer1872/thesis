@@ -3,7 +3,6 @@
 """
 
 # standard libraries
-import cProfile, pstats
 from multiprocessing import Pool
 import os
 from pathlib import Path
@@ -26,14 +25,14 @@ def main():
     binary_file_paths = data_path.glob("*.bin")
 
     num_files = len(list(data_path.glob("*.bin")))
-    print(f"Processing {num_files} dates (1 file per date)")
+    print(f"\nProcessing {num_files} dates...")
 
     results = load_and_process_all(binary_file_paths)
 
     timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", "-")
     os.makedirs("results", exist_ok=True)
     with open(f"results/results_{timestamp}.pickle", "wb") as pickle_file:
-        pickle.dump(results, pickle_file)
+        pickle.dump(results, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 

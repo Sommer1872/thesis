@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
 """
+
+from collections import defaultdict
 from typing import Dict
 
 import pandas as pd
 
 from calculate_statistics.best_bid_ask import calculate_best_bid_ask_statistics
+from calculate_statistics.best_depths import calculate_best_depth_statistics
 from calculate_statistics.snapshots import calculate_snapshot_statistics
 from calculate_statistics.effective_stats import calculate_effective_statistics
 from calculate_statistics.realized_vola import calculate_realized_vola_stats
@@ -30,14 +33,13 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
     # keep only CHF denoted
     metadata = metadata[metadata["currency"] == "CHF"]
 
-    all_snapshot_stats = dict()
-    all_price_impact_stats = dict()
-    all_time_weighted_stats = dict()
-    all_effective_stats = dict()
-    all_realized_vola_stats = dict()
+    all_statistics = dict()
 
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:
+
+        all_statistics[orderbook_no] = dict()
+        this_orderbook_stats = all_statistics[orderbook_no]
 
         metainfo = metadata.loc[orderbook_no]
         price_decimals = 10 ** metainfo.price_decimals
@@ -57,12 +59,19 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
 
         # best bid and ask
         best_bid_ask = pd.DataFrame(this_day_imi_data.best_bid_ask[orderbook_no])
-        all_time_weighted_stats[orderbook_no] = calculate_best_bid_ask_statistics(best_bid_ask, trading_actions, metainfo, start_microsecond, end_microsecond)
+        best_bid_ask_stats = calculate_best_bid_ask_statistics(best_bid_ask, trading_actions, metainfo, start_microsecond, end_microsecond)
+        this_orderbook_stats["best_bid_ask_stats"] = best_bid_ask_stats
 
-        # snapshots for quoted spreads
+        # depth at best
+        best_depths = pd.DataFrame(this_day_imi_data.best_depths[orderbook_no])
+        best_depth_stats = calculate_best_depth_statistics(best_depths, trading_actions, start_microsecond, end_microsecond)
+        this_orderbook_stats["best_depth_stats"] = best_depth_stats
+
+        # snapshots
         snapshots = pd.DataFrame.from_dict(this_day_imi_data.snapshots[orderbook_no], orient="index")
         snapshots = snapshots.loc[int(start_microsecond*1e-6):int(end_microsecond*1e-6)]
-        all_snapshot_stats[orderbook_no] = calculate_snapshot_statistics(snapshots, trading_actions, metainfo)
+        snapshot_stats = calculate_snapshot_statistics(snapshots, trading_actions, metainfo)
+        this_orderbook_stats["snapshot_stats"] = snapshot_stats
 
         # transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
@@ -76,16 +85,12 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, pd.DataFrame]:
         transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
 
         # effective_spreads
-        all_effective_stats[orderbook_no] = calculate_effective_statistics(transactions, metainfo, tick_sizes)
-
+        this_orderbook_stats["effective_stats"] = calculate_effective_statistics(transactions, metainfo, tick_sizes)
         # realized volatility
-        all_realized_vola_stats[orderbook_no] = calculate_realized_vola_stats(transactions)
+        this_orderbook_stats["realized_vola_stats"] = calculate_realized_vola_stats(transactions)
 
     results = {"date": this_day_imi_data.date,
-        "all_time_weighted_stats": all_time_weighted_stats,
-        "all_snapshot_stats": all_snapshot_stats,
-        "all_effective_stats": all_effective_stats,
-        "all_realized_vola_stats": all_realized_vola_stats,
+        "all_statistics": all_statistics,
         "metadata": metadata}
 
     return results

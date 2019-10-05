@@ -12,6 +12,7 @@ def calculate_snapshot_statistics(snapshots: pd.DataFrame, trading_actions: pd.D
     snapshots["relative_quoted_spread_bps"] = (snapshots["quoted_spread"] / snapshots["mid"]) * 100
     snapshots[["quoted_spread", "mid"]] /= price_decimals
     snapshots[["best_ask", "best_bid"]] = (snapshots[["best_ask", "best_bid"]] / price_decimals)
+    snapshots["depth_at_best"] = snapshots["best_bid_quantity"] + snapshots["best_ask_quantity"]
 
     # filter based on trading_actions
     if not trading_actions.empty:
