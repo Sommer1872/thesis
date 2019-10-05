@@ -35,7 +35,7 @@ def main():
     timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", "-")
     os.makedirs("results", exist_ok=True)
 
-    results.to_csv(f"results/{timestamp}", float_format="%g")
+    results.to_csv(f"results/{timestamp}.csv", float_format="%g")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 
