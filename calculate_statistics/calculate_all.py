@@ -3,7 +3,7 @@
 """
 
 from collections import defaultdict
-from typing import Dict, Union
+from typing import Any, Dict, Union
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ from calculate_statistics.effective_stats import calculate_effective_statistics
 from calculate_statistics.realized_vola import calculate_realized_vola_stats
 
 
-def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, pd.DataFrame]]:
+def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
 
     start_microsecond = int(9.25 * 3600e6)
     end_microsecond = int(17.25 * 3600e6)
@@ -33,7 +33,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, pd.Data
     # keep only CHF denoted
     metadata = metadata[metadata["currency"] == "CHF"]
 
-    all_statistics = dict()
+    all_statistics: Dict[int, Dict[str, Any]] = dict()
 
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:

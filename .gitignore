@@ -1,5 +1,6 @@
 **.csv
 **.bin
 **.pickle
+.mypy_cache/
 __pycache__/
 **.ipynb
