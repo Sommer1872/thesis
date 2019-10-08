@@ -23,11 +23,9 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
     metadata = pd.DataFrame.from_dict(this_day_imi_data.metadata, orient="index")
     string_columns = ["price_type", "isin", "currency", "group"]
     metadata[string_columns] = metadata[string_columns].apply(
-        lambda column: column.str.decode("utf-8")
-    )
+        lambda column: column.str.decode("utf-8"))
     metadata[string_columns] = metadata[string_columns].apply(
-        lambda column: column.str.strip()
-    )
+        lambda column: column.str.strip())
     # keep only BlueChips
     metadata = metadata[metadata["group"] == "ACoK"]
     # keep only CHF denoted

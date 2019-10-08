@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 from calculate_statistics.calculate_all import calculate_orderbook_stats
 from process_messages.orderbook_stats import SingleDayIMIData
-from results.process_results import process_results
+from daily_statistics.process import process_daily_statistics
 
 
 def main():
@@ -27,15 +27,16 @@ def main():
 
     num_files = len(list(data_path.glob("*.bin")))
     print(f"\nProcessing {num_files} trading days...")
-    results = load_and_process_all(binary_file_paths)
+    daily_stats = load_and_process_all(binary_file_paths)
 
     print(f"\nProcessing results...")
-    results = process_results(results)
+    results = process_daily_statistics(daily_stats)
 
-    timestamp = str(pd.Timestamp("today").ceil("1s")).replace(":", "-")
-    os.makedirs("results", exist_ok=True)
-
-    results.to_csv(f"results/{timestamp}.csv", float_format="%g")
+    timestamp = str(pd.Timestamp("now").ceil("1s")).replace(":", "-")
+    os.makedirs("daily_statistics/stats", exist_ok=True)
+    filepath = Path(f"daily_statistics/stats/{timestamp}_daily_stats.csv")
+    results.to_csv(filepath, float_format="%g")
+    print(f"Saved daily statistics file to {filepath}")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 

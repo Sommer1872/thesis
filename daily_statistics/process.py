@@ -6,7 +6,7 @@ from typing import Dict, List
 import pandas as pd
 from tqdm import tqdm
 
-def process_results(results: List[Dict]) -> pd.DataFrame:
+def process_daily_statistics(results: List[Dict]) -> pd.DataFrame:
     all_results = list()
     for date_stats in tqdm(results):
         metadata = date_stats["metadata"]
