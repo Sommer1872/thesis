@@ -19,6 +19,7 @@ def process_daily_statistics(results: List[Dict]) -> pd.DataFrame:
             metadata.loc[orderbook_no, "mean_quoted_spread_bps"] = snapshot_stats.loc["mean", "relative_quoted_spread_bps"]
             metadata.loc[orderbook_no, "median_quoted_spread_bps"] = snapshot_stats.loc["50%", "relative_quoted_spread_bps"]
             metadata.loc[orderbook_no, "mean_depth_at_best"] = snapshot_stats.loc["mean", "depth_at_best"]
+            metadata.loc[orderbook_no, "median_depth_at_best"] = snapshot_stats.loc["50%", "depth_at_best"]
 
             # best_bid_ask
             best_bid_ask_stats = this_orderbook_stats["best_bid_ask_stats"]
@@ -39,8 +40,11 @@ def process_daily_statistics(results: List[Dict]) -> pd.DataFrame:
             effective_stats = this_orderbook_stats.get("effective_stats", pd.DataFrame())
             if not effective_stats.empty:
                 metadata.loc[orderbook_no, "mean_effective_spread"] = effective_stats.loc["mean", "effective_spread"]
+                metadata.loc[orderbook_no, "median_effective_spread"] = effective_stats.loc["50%", "effective_spread"]
                 metadata.loc[orderbook_no, "mean_relative_effective_spread_bps"] = effective_stats.loc["mean", "relative_effective_spread_bps"]
+                metadata.loc[orderbook_no, "median_relative_effective_spread_bps"] = effective_stats.loc["50%", "relative_effective_spread_bps"]
                 metadata.loc[orderbook_no, "mean_spread_leeway"] = effective_stats.loc["mean", "spread_leeway"]
+                metadata.loc[orderbook_no, "median_spread_leeway"] = effective_stats.loc["50%", "spread_leeway"]
                 metadata.loc[orderbook_no, "mean_tick_size"] = effective_stats.loc["mean", "tick_size"]
         all_results.append(metadata)
 
