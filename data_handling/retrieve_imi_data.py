@@ -63,9 +63,8 @@ def curl_data(filepath: Path, month: str, username: str, password: str):
         raise ValueError("response.status.code was not == 200")
 
 
-def get_weekday_dates(
-    start_date: pd.Timestamp, end_date: pd.Timestamp
-) -> pd.DatetimeIndex:
+def get_weekday_dates(start_date: pd.Timestamp,
+                      end_date: pd.Timestamp) -> pd.DatetimeIndex:
     """
     :return: a pandas index (iterable) of datetimes that contains dates from start_date till end_date
     """

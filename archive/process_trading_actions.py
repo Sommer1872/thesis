@@ -39,15 +39,18 @@ def main():
 
 def load_and_process_all(file_paths: Iterator[Path]) -> List[tuple]:
     with Pool(processes=os.cpu_count() - 1) as pool:
-        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths)))
+        results = list(
+            tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths)))
     return results
 
 
 def load_and_process_orderbook_stats(file_path: Path):
     this_day_imi_data = SingleDayIMIData(file_path)
     this_day_imi_data.process_messages()
-    results = {"date": this_day_imi_data.date,
-    "trading_actions": this_day_imi_data.trading_actions}
+    results = {
+        "date": this_day_imi_data.date,
+        "trading_actions": this_day_imi_data.trading_actions
+    }
     return results
 
 

@@ -21,7 +21,6 @@ class SingleDayIMIData(object):
         self.date = file_path.name[11:21].replace("_", "-")
         self.current_position = 0
 
-
         self.metadata = defaultdict(dict)
         self.blue_chip_orderbooks = list()
         self.trading_actions = list()
@@ -41,9 +40,8 @@ class SingleDayIMIData(object):
         while self.current_position < self.number_of_bytes:
 
             message_length = self.data[self.current_position + 1]
-            message_type = self.data[
-                self.current_position + 2 : self.current_position + 3
-            ]
+            message_type = self.data[self.current_position + 2:self.current_position +
+                                     3]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2
             # access the message

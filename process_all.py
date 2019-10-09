@@ -43,7 +43,8 @@ def main():
 
 def load_and_process_all(file_paths: Iterator[Path]) -> List[tuple]:
     with Pool(processes=os.cpu_count() - 1) as pool:
-        results = list(tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths)))
+        results = list(
+            tqdm(pool.imap_unordered(load_and_process_orderbook_stats, file_paths)))
     return results
 
 

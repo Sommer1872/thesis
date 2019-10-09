@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 
 class OrderBookSide(SortedDict):
+
     def __missing__(self, key):
         return 0
 
@@ -23,9 +24,8 @@ class SingleDayIMIData(object):
 
         self.orders = defaultdict(dict)
         self.orderbooks = defaultdict(dict)
-        self.get_order_info = itemgetter(
-            "orderbook", "order_verb", "order_entry_price", "order_quantity_outstanding"
-        )
+        self.get_order_info = itemgetter("orderbook", "order_verb", "order_entry_price",
+                                         "order_quantity_outstanding")
 
         # Reading the binary file into memory
         with open(self.file_path, "rb") as binary_file:
@@ -39,9 +39,8 @@ class SingleDayIMIData(object):
         while self.current_position < self.number_of_bytes:
 
             message_length = self.data[self.current_position + 1]
-            message_type = self.data[
-                self.current_position + 2 : self.current_position + 3
-            ]
+            message_type = self.data[self.current_position + 2:self.current_position +
+                                     3]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2
 

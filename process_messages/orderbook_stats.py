@@ -15,8 +15,10 @@ from sortedcontainers import SortedDict
 
 
 class OrderBookSide(SortedDict):
+
     def __missing__(self, key):
         return 0
+
     def peekitem(self, index=-1):
         try:
             return super().peekitem(index)
@@ -38,9 +40,8 @@ class SingleDayIMIData(object):
         self.current_position = 0
 
         self.unpack = struct.unpack
-        self.get_order_info = itemgetter(
-            "orderbook_no", "book_side", "price", "quantity_outstanding"
-        )
+        self.get_order_info = itemgetter("orderbook_no", "book_side", "price",
+                                         "quantity_outstanding")
 
         self.orders = defaultdict(dict)
         self.orderbooks = defaultdict(dict)
@@ -54,13 +55,17 @@ class SingleDayIMIData(object):
         self.trading_actions = defaultdict(list)
         self.blue_chip_orderbooks = list()
 
-        self.Transaction = namedtuple("Transaction", ["timestamp", "price", "size",
-            "best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"])
-        self.Snapshot = namedtuple("Snapshot", ["best_bid", "best_ask",
-            "best_bid_quantity", "best_ask_quantity"])
-        self.NewBestPrice = namedtuple("NewBestPrice", ["timestamp", "book_side", "new_best_price"])
-        self.NewBestQuantity = namedtuple("NewBestQuantity", ["timestamp", "book_side", "new_best_quantity"])
-
+        self.Transaction = namedtuple("Transaction", [
+            "timestamp", "price", "size", "best_bid", "best_ask", "best_bid_quantity",
+            "best_ask_quantity"
+        ])
+        self.Snapshot = namedtuple(
+            "Snapshot",
+            ["best_bid", "best_ask", "best_bid_quantity", "best_ask_quantity"])
+        self.NewBestPrice = namedtuple("NewBestPrice",
+                                       ["timestamp", "book_side", "new_best_price"])
+        self.NewBestQuantity = namedtuple(
+            "NewBestQuantity", ["timestamp", "book_side", "new_best_quantity"])
 
     def process_messages(self):
         """Convert and process all messages inside a loop"""
@@ -69,9 +74,8 @@ class SingleDayIMIData(object):
         while self.current_position < self.number_of_bytes:
 
             message_length = self.data[self.current_position + 1]
-            message_type = self.data[
-                self.current_position + 2 : self.current_position + 3
-            ]
+            message_type = self.data[self.current_position + 2:self.current_position +
+                                     3]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2
             # access the message
@@ -97,18 +101,16 @@ class SingleDayIMIData(object):
                 # record if price was at best
                 best_price, best_quantity = this_orderbook.peekitem(0)
                 if price == best_price:
-                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
-                        timestamp=timestamp,
-                        book_side=book_side,
-                        new_best_quantity=best_quantity)
-                    )
+                    self.best_depths[orderbook_no].append(
+                        self.NewBestQuantity(timestamp=timestamp,
+                                             book_side=book_side,
+                                             new_best_quantity=best_quantity))
                     # if it's the only one at the best price
                     if quantity == best_quantity:
-                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_price=price)
-                        )
+                        self.best_bid_ask[orderbook_no].append(
+                            self.NewBestPrice(timestamp=timestamp,
+                                              book_side=book_side,
+                                              new_best_price=price))
 
             # Time Stamp – Seconds message
             elif message_type == b"T":
@@ -117,8 +119,10 @@ class SingleDayIMIData(object):
                 self.microseconds = int(seconds * 1e6)
                 if seconds >= 8 * 3600 and seconds < 18 * 3600:
                     for orderbook_no, this_orderbook in self.orderbooks.items():
-                        best_bid_price, best_bid_quantity = this_orderbook[b"B"].peekitem(0)
-                        best_ask_price, best_ask_quantity = this_orderbook[b"S"].peekitem(0)
+                        best_bid_price, best_bid_quantity = this_orderbook[
+                            b"B"].peekitem(0)
+                        best_ask_price, best_ask_quantity = this_orderbook[
+                            b"S"].peekitem(0)
                         self.snapshots[orderbook_no][seconds] = self.Snapshot(
                             best_bid=best_bid_price,
                             best_ask=best_ask_price,
@@ -135,8 +139,7 @@ class SingleDayIMIData(object):
                 self.orders.pop(order_no)
                 # update the order book
                 orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
-                    this_order
-                )
+                    this_order)
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
                 this_orderbook[price] -= quantity_outstanding
                 best_price, best_quantity = this_orderbook.peekitem(0)
@@ -146,17 +149,15 @@ class SingleDayIMIData(object):
                         # this price level and note that there's a new best price
                         this_orderbook.pop(price)
                         best_price, best_quantity = this_orderbook.peekitem(0)
-                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_price=best_price)
-                        )
+                        self.best_bid_ask[orderbook_no].append(
+                            self.NewBestPrice(timestamp=timestamp,
+                                              book_side=book_side,
+                                              new_best_price=best_price))
                     # in any case, if the price was at best, we note the new best quantity
-                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
-                        timestamp=timestamp,
-                        book_side=book_side,
-                        new_best_quantity=best_quantity)
-                    )
+                    self.best_depths[orderbook_no].append(
+                        self.NewBestQuantity(timestamp=timestamp,
+                                             book_side=book_side,
+                                             new_best_quantity=best_quantity))
                 # if price was not at best, but there's no quantity outstanding
                 # we remove this price level
                 elif this_orderbook[price] == 0:
@@ -196,17 +197,15 @@ class SingleDayIMIData(object):
                         # this price level and note that there's a new best price
                         this_orderbook.pop(old_order_price)
                         best_price, best_quantity = this_orderbook.peekitem(0)
-                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_price=best_price)
-                        )
+                        self.best_bid_ask[orderbook_no].append(
+                            self.NewBestPrice(timestamp=timestamp,
+                                              book_side=book_side,
+                                              new_best_price=best_price))
                     # in any case, if the price was at best, we note the new best quantity
-                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
-                        timestamp=timestamp,
-                        book_side=book_side,
-                        new_best_quantity=best_quantity)
-                    )
+                    self.best_depths[orderbook_no].append(
+                        self.NewBestQuantity(timestamp=timestamp,
+                                             book_side=book_side,
+                                             new_best_quantity=best_quantity))
                 # if price was not at best, but there's no quantity outstanding
                 # we remove this price level
                 elif this_orderbook[old_order_price] == 0:
@@ -216,18 +215,16 @@ class SingleDayIMIData(object):
                 # record if price was at best
                 best_price, best_quantity = this_orderbook.peekitem(0)
                 if price == best_price:
-                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
-                        timestamp=timestamp,
-                        book_side=book_side,
-                        new_best_quantity=best_quantity)
-                    )
+                    self.best_depths[orderbook_no].append(
+                        self.NewBestQuantity(timestamp=timestamp,
+                                             book_side=book_side,
+                                             new_best_quantity=best_quantity))
                     # if it's the only one at the best price
                     if quantity == best_quantity:
-                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_price=price)
-                        )
+                        self.best_bid_ask[orderbook_no].append(
+                            self.NewBestPrice(timestamp=timestamp,
+                                              book_side=book_side,
+                                              new_best_price=price))
 
             # Order Executed Message
             elif message_type == b"E":
@@ -240,8 +237,7 @@ class SingleDayIMIData(object):
                 this_order = self.orders[order_no]
                 this_order["quantity_outstanding"] -= executed_quantity
                 orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
-                    this_order
-                )
+                    this_order)
                 if quantity_outstanding == 0:
                     self.orders.pop(order_no)
                 # order book
@@ -249,15 +245,16 @@ class SingleDayIMIData(object):
                 # info to calculate effective spreads
                 best_bid_price, best_bid_quantity = this_orderbook[b"B"].peekitem(0)
                 best_ask_price, best_ask_quantity = this_orderbook[b"S"].peekitem(0)
-                self.transactions[orderbook_no].append(self.Transaction(
-                    timestamp=timestamp,
-                    price=price,
-                    size=executed_quantity,
-                    best_bid=best_bid_price,
-                    best_ask=best_ask_price,
-                    best_ask_quantity=best_ask_quantity,
-                    best_bid_quantity=best_bid_quantity,
-                ))
+                self.transactions[orderbook_no].append(
+                    self.Transaction(
+                        timestamp=timestamp,
+                        price=price,
+                        size=executed_quantity,
+                        best_bid=best_bid_price,
+                        best_ask=best_ask_price,
+                        best_ask_quantity=best_ask_quantity,
+                        best_bid_quantity=best_bid_quantity,
+                    ))
                 # update the order book
                 this_orderbook = this_orderbook[book_side]
                 this_orderbook[price] -= executed_quantity
@@ -268,22 +265,19 @@ class SingleDayIMIData(object):
                         # this price level and note that there's a new best price
                         this_orderbook.pop(price)
                         best_price, best_quantity = this_orderbook.peekitem(0)
-                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_price=best_price)
-                        )
+                        self.best_bid_ask[orderbook_no].append(
+                            self.NewBestPrice(timestamp=timestamp,
+                                              book_side=book_side,
+                                              new_best_price=best_price))
                     # in any case, if the price was at best, we note the new best quantity
-                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
-                        timestamp=timestamp,
-                        book_side=book_side,
-                        new_best_quantity=best_quantity)
-                    )
+                    self.best_depths[orderbook_no].append(
+                        self.NewBestQuantity(timestamp=timestamp,
+                                             book_side=book_side,
+                                             new_best_quantity=best_quantity))
                 # if price was not at best, but there's no quantity outstanding
                 # we remove this price level
                 elif this_orderbook[price] == 0:
                     this_orderbook.pop(price)
-
 
             # Order Executed With Price message
             elif message_type == b"C":
@@ -306,7 +300,6 @@ class SingleDayIMIData(object):
                 this_orderbook[price] -= executed_quantity
                 if this_orderbook[price] == 0:
                     this_orderbook.pop(price)
-
 
             # Orderbook Directory message
             elif message_type == b"R":
@@ -359,7 +352,8 @@ class SingleDayIMIData(object):
                 orderbook_no = message[1]
                 trading_state = message[2]
                 book_condition = message[3]
-                self.trading_actions[orderbook_no].append((timestamp, trading_state, book_condition))
+                self.trading_actions[orderbook_no].append(
+                    (timestamp, trading_state, book_condition))
 
             else:
                 pass  # because message type is not relevant

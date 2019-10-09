@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 
 class OrderBookSide(SortedDict):
+
     def __missing__(self, key):
         return 0
 
@@ -27,9 +28,8 @@ class SingleDayIMIData(object):
 
         self.orders = defaultdict(dict)
         self.orderbooks = defaultdict(dict)
-        self.get_order_info = itemgetter(
-            "orderbook", "order_verb", "order_entry_price", "order_quantity_outstanding"
-        )
+        self.get_order_info = itemgetter("orderbook", "order_verb", "order_entry_price",
+                                         "order_quantity_outstanding")
 
         # Reading the binary file into memory
         with open(self.file_path, "rb") as binary_file:
@@ -43,9 +43,8 @@ class SingleDayIMIData(object):
         while self.current_position < self.number_of_bytes:
 
             message_length = self.data[self.current_position + 1]
-            message_type = self.data[
-                self.current_position + 2 : self.current_position + 3
-            ]
+            message_type = self.data[self.current_position + 2:self.current_position +
+                                     3]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2
 
@@ -63,9 +62,8 @@ class SingleDayIMIData(object):
                     # aggregate with best bid/ask in orderbook
                     # best_bid_price, best_bid_quantity = self.orderbooks[orderbook][b'B'].peekitem(0)
                     # best_ask_price, best_ask_quantity = self.orderbooks[orderbook][b'S'].peekitem(0)
-                    self.orders[order_no]["order_entry_time"] = (
-                        self.microseconds + message[0] * 1e-3
-                    )
+                    self.orders[order_no]["order_entry_time"] = (self.microseconds +
+                                                                 message[0] * 1e-3)
                     self.orders[order_no]["order_verb"] = order_verb
                     self.orders[order_no]["order_quantity_entered"] = order_quantity
                     self.orders[order_no]["order_quantity_outstanding"] = order_quantity
@@ -80,8 +78,7 @@ class SingleDayIMIData(object):
                     self.orders[order_no]["best_ask_quantity"] = best_ask_quantity
                     # update the side (order_verb) of the orderbook
                     self.orderbooks[orderbook][order_verb][
-                        order_price
-                    ] += order_quantity
+                        order_price] += order_quantity
 
             # Orderbook Directory message
             elif message_type == b"R":
@@ -102,9 +99,8 @@ class SingleDayIMIData(object):
                 message = unpack(">iq", message)
                 order_no = message[1]
                 # update the order entry
-                self.orders[order_no]["order_remove_time"] = (
-                    self.microseconds + message[0] * 1e-3
-                )
+                self.orders[order_no]["order_remove_time"] = (self.microseconds +
+                                                              message[0] * 1e-3)
                 self.orders[order_no]["order_quantity_outstanding"] = 0
                 if self.orders[order_no]["status"] is None:
                     self.orders[order_no]["status"] = "deleted"
@@ -130,14 +126,11 @@ class SingleDayIMIData(object):
                 orderbook = self.orders[old_order_no]["orderbook"]
                 # aggregate with best bid/ask in orderbook
                 best_bid_price, best_bid_quantity = self.orderbooks[orderbook][
-                    b"B"
-                ].peekitem(0)
+                    b"B"].peekitem(0)
                 best_ask_price, best_ask_quantity = self.orderbooks[orderbook][
-                    b"S"
-                ].peekitem(0)
-                self.orders[new_order_no]["order_entry_time"] = (
-                    self.microseconds + message[0] * 1e-3
-                )
+                    b"S"].peekitem(0)
+                self.orders[new_order_no]["order_entry_time"] = (self.microseconds +
+                                                                 message[0] * 1e-3)
                 self.orders[new_order_no]["order_verb"] = order_verb
                 self.orders[new_order_no]["order_quantity_entered"] = order_quantity
                 self.orders[new_order_no]["order_quantity_outstanding"] = order_quantity
@@ -151,9 +144,10 @@ class SingleDayIMIData(object):
                 self.orders[new_order_no]["best_ask_price"] = best_ask_price
                 self.orders[new_order_no]["best_ask_quantity"] = best_ask_quantity
                 # mark old order as replaced
-                self.orders[old_order_no].update(
-                    {"order_remove_time": timestamp, "status": "replaced"}
-                )
+                self.orders[old_order_no].update({
+                    "order_remove_time": timestamp,
+                    "status": "replaced"
+                })
                 # # adjust orderbook
                 # # new order
                 # this_orderbook = self.orderbooks[orderbook][order_verb]
@@ -173,19 +167,16 @@ class SingleDayIMIData(object):
                 match_number = message[3]
                 # update the order entry
                 this_order = self.orders[order_no]
-                this_order.update(
-                    {
-                        "order_remove_time": timestamp,
-                        "order_filled_price": self.orders[order_no][
-                            "order_entry_price"
-                        ],
-                    }
-                )
+                this_order.update({
+                    "order_remove_time": timestamp,
+                    "order_filled_price": self.orders[order_no]["order_entry_price"],
+                })
                 this_order["order_quantity_outstanding"] -= executed_quantity
                 if this_order["order_quantity_outstanding"] == 0:
-                    this_order.update(
-                        {"status": "filled", "order_remove_time": timestamp}
-                    )
+                    this_order.update({
+                        "status": "filled",
+                        "order_remove_time": timestamp
+                    })
                 else:
                     this_order["status"] = "partially filled"
                 # # update the order book
@@ -206,12 +197,10 @@ class SingleDayIMIData(object):
                 execution_price = message[5]
                 # update the order entry
                 this_order = self.orders[order_no]
-                this_order.update(
-                    {
-                        "order_remove_time": timestamp,
-                        "order_filled_price": execution_price,
-                    }
-                )
+                this_order.update({
+                    "order_remove_time": timestamp,
+                    "order_filled_price": execution_price,
+                })
                 this_order["order_quantity_outstanding"] -= executed_quantity
                 if this_order["order_quantity_outstanding"] == 0:
                     this_order["status"] = "filled"
