@@ -317,15 +317,15 @@ class SingleDayIMIData(object):
                 this_metadata["group"] = group
                 if group == b"ACoK    ":
                     self.blue_chip_orderbooks.append(orderbook_no)
-                    this_metadata["price_type"] = message[2]
-                    this_metadata["isin"] = message[3]
-                    this_metadata["currency"] = message[4]
-                    this_metadata["minimum_quantity"] = message[6]
-                    this_metadata["quantity_tick_table_id"] = message[7]
-                    this_metadata["price_tick_table_id"] = message[8]
-                    this_metadata["price_decimals"] = message[9]
-                    this_metadata["delisting_date"] = message[10]
-                    this_metadata["delisting_time"] = message[11]
+                this_metadata["price_type"] = message[2]
+                this_metadata["isin"] = message[3]
+                this_metadata["currency"] = message[4]
+                this_metadata["minimum_quantity"] = message[6]
+                this_metadata["quantity_tick_table_id"] = message[7]
+                this_metadata["price_tick_table_id"] = message[8]
+                this_metadata["price_decimals"] = message[9]
+                this_metadata["delisting_date"] = message[10]
+                this_metadata["delisting_time"] = message[11]
 
             # Price Tick Size message
             elif message_type == b"L":

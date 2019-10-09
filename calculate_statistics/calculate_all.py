@@ -47,7 +47,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         tick_sizes = pd.DataFrame.from_dict(
             this_day_imi_data.price_tick_sizes[tick_table_id], orient="index")
 
-        # trading actions
+        # trading actions (such as stop trading events)
         trading_actions = pd.DataFrame(
             this_day_imi_data.trading_actions[orderbook_no],
             columns=["timestamp", "trading_state", "book_condition"])
