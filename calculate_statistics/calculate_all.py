@@ -26,8 +26,8 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         lambda column: column.str.decode("utf-8"))
     metadata[string_columns] = metadata[string_columns].apply(
         lambda column: column.str.strip())
-    # keep only BlueChips
-    metadata = metadata[metadata["group"] == "ACoK"]
+    # keep only BlueChips / Small-/Mid-Caps
+    metadata = metadata[metadata["group"].isin(["ACoK", "ABck"])]
     # keep only CHF denoted
     metadata = metadata[metadata["currency"] == "CHF"]
 

@@ -91,26 +91,24 @@ class SingleDayIMIData(object):
                 this_order["book_side"] = book_side
                 this_order["quantity_outstanding"] = quantity
                 this_order["price"] = price
-
-                if orderbook_no in self.blue_chip_orderbooks:
-                    # update the side of the orderbook_no
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
-                    this_orderbook[price] += quantity
-                    # record if price was at best
-                    best_price, best_quantity = this_orderbook.peekitem(0)
-                    if price == best_price:
-                        self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                # update the orderbook
+                this_orderbook = self.orderbooks[orderbook_no][book_side]
+                this_orderbook[price] += quantity
+                # record if price was at best
+                best_price, best_quantity = this_orderbook.peekitem(0)
+                if price == best_price:
+                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                        timestamp=timestamp,
+                        book_side=book_side,
+                        new_best_quantity=best_quantity)
+                    )
+                    # if it's the only one at the best price
+                    if quantity == best_quantity:
+                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity)
+                            new_best_price=price)
                         )
-                        # if it's the only one at the best price
-                        if quantity == best_quantity:
-                            self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                                timestamp=timestamp,
-                                book_side=book_side,
-                                new_best_price=price)
-                            )
 
             # Time Stamp – Seconds message
             elif message_type == b"T":
@@ -118,8 +116,7 @@ class SingleDayIMIData(object):
                 seconds = message[0]
                 self.microseconds = int(seconds * 1e6)
                 if seconds >= 8 * 3600 and seconds < 18 * 3600:
-                    for orderbook_no in self.blue_chip_orderbooks:
-                        this_orderbook = self.orderbooks[orderbook_no]
+                    for orderbook_no, this_orderbook in self.orderbooks.items():
                         best_bid_price, best_bid_quantity = this_orderbook[b"B"].peekitem(0)
                         best_ask_price, best_ask_quantity = this_orderbook[b"S"].peekitem(0)
                         self.snapshots[orderbook_no][seconds] = self.Snapshot(
@@ -136,36 +133,34 @@ class SingleDayIMIData(object):
                 order_no = message[1]
                 this_order = self.orders[order_no]
                 self.orders.pop(order_no)
-
                 # update the order book
                 orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
                     this_order
                 )
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
-                    this_orderbook[price] -= quantity_outstanding
-                    best_price, best_quantity = this_orderbook.peekitem(0)
-                    if price == best_price:
-                        if best_quantity == 0:
-                            # if there is no quantity left at that price, we remove
-                            # this price level and note that there's a new best price
-                            this_orderbook.pop(price)
-                            best_price, best_quantity = this_orderbook.peekitem(0)
-                            self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                                timestamp=timestamp,
-                                book_side=book_side,
-                                new_best_price=best_price)
-                            )
-                        # in any case, if the price was at best, we note the new best quantity
-                        self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                this_orderbook = self.orderbooks[orderbook_no][book_side]
+                this_orderbook[price] -= quantity_outstanding
+                best_price, best_quantity = this_orderbook.peekitem(0)
+                if price == best_price:
+                    if best_quantity == 0:
+                        # if there is no quantity left at that price, we remove
+                        # this price level and note that there's a new best price
+                        this_orderbook.pop(price)
+                        best_price, best_quantity = this_orderbook.peekitem(0)
+                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity)
+                            new_best_price=best_price)
                         )
-                    # if price was not at best, but there's no quantity outstanding
-                    # we remove this price level
-                    elif this_orderbook[price] == 0:
-                        this_orderbook.pop(price)
+                    # in any case, if the price was at best, we note the new best quantity
+                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                        timestamp=timestamp,
+                        book_side=book_side,
+                        new_best_quantity=best_quantity)
+                    )
+                # if price was not at best, but there's no quantity outstanding
+                # we remove this price level
+                elif this_orderbook[price] == 0:
+                    this_orderbook.pop(price)
 
             # Order Replace Message
             elif message_type == b"U":
@@ -191,50 +186,48 @@ class SingleDayIMIData(object):
                 new_order["price"] = price
 
                 # adjust orderbook
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
-                    # old order
-                    this_orderbook[old_order_price] -= old_quantity_outstanding
-                    best_price, best_quantity = this_orderbook.peekitem(0)
-                    if old_order_price == best_price:
-                        if best_quantity == 0:
-                            # if there is no quantity left at that price, we remove
-                            # this price level and note that there's a new best price
-                            this_orderbook.pop(old_order_price)
-                            best_price, best_quantity = this_orderbook.peekitem(0)
-                            self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                                timestamp=timestamp,
-                                book_side=book_side,
-                                new_best_price=best_price)
-                            )
-                        # in any case, if the price was at best, we note the new best quantity
-                        self.best_depths[orderbook_no].append(self.NewBestQuantity(
-                            timestamp=timestamp,
-                            book_side=book_side,
-                            new_best_quantity=best_quantity)
-                        )
-                    # if price was not at best, but there's no quantity outstanding
-                    # we remove this price level
-                    elif this_orderbook[old_order_price] == 0:
+                this_orderbook = self.orderbooks[orderbook_no][book_side]
+                # old order
+                this_orderbook[old_order_price] -= old_quantity_outstanding
+                best_price, best_quantity = this_orderbook.peekitem(0)
+                if old_order_price == best_price:
+                    if best_quantity == 0:
+                        # if there is no quantity left at that price, we remove
+                        # this price level and note that there's a new best price
                         this_orderbook.pop(old_order_price)
-
-                    # new order
-                    this_orderbook[price] += quantity
-                    # record if price was at best
-                    best_price, best_quantity = this_orderbook.peekitem(0)
-                    if price == best_price:
-                        self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                        best_price, best_quantity = this_orderbook.peekitem(0)
+                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity)
+                            new_best_price=best_price)
                         )
-                        # if it's the only one at the best price
-                        if quantity == best_quantity:
-                            self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                                timestamp=timestamp,
-                                book_side=book_side,
-                                new_best_price=price)
-                            )
+                    # in any case, if the price was at best, we note the new best quantity
+                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                        timestamp=timestamp,
+                        book_side=book_side,
+                        new_best_quantity=best_quantity)
+                    )
+                # if price was not at best, but there's no quantity outstanding
+                # we remove this price level
+                elif this_orderbook[old_order_price] == 0:
+                    this_orderbook.pop(old_order_price)
+                # new order
+                this_orderbook[price] += quantity
+                # record if price was at best
+                best_price, best_quantity = this_orderbook.peekitem(0)
+                if price == best_price:
+                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                        timestamp=timestamp,
+                        book_side=book_side,
+                        new_best_quantity=best_quantity)
+                    )
+                    # if it's the only one at the best price
+                    if quantity == best_quantity:
+                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
+                            timestamp=timestamp,
+                            book_side=book_side,
+                            new_best_price=price)
+                        )
 
             # Order Executed Message
             elif message_type == b"E":
@@ -252,45 +245,44 @@ class SingleDayIMIData(object):
                 if quantity_outstanding == 0:
                     self.orders.pop(order_no)
                 # order book
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no]
-                    # info to calculate effective spreads
-                    best_bid_price, best_bid_quantity = this_orderbook[b"B"].peekitem(0)
-                    best_ask_price, best_ask_quantity = this_orderbook[b"S"].peekitem(0)
-                    self.transactions[orderbook_no].append(self.Transaction(
-                        timestamp=timestamp,
-                        price=price,
-                        size=executed_quantity,
-                        best_bid=best_bid_price,
-                        best_ask=best_ask_price,
-                        best_ask_quantity=best_ask_quantity,
-                        best_bid_quantity=best_bid_quantity,
-                    ))
-                    # update the order book
-                    this_orderbook = this_orderbook[book_side]
-                    this_orderbook[price] -= executed_quantity
-                    best_price, best_quantity = this_orderbook.peekitem(0)
-                    if price == best_price:
-                        if best_quantity == 0:
-                            # if there is no quantity left at that price, we remove
-                            # this price level and note that there's a new best price
-                            this_orderbook.pop(price)
-                            best_price, best_quantity = this_orderbook.peekitem(0)
-                            self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
-                                timestamp=timestamp,
-                                book_side=book_side,
-                                new_best_price=best_price)
-                            )
-                        # in any case, if the price was at best, we note the new best quantity
-                        self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                this_orderbook = self.orderbooks[orderbook_no]
+                # info to calculate effective spreads
+                best_bid_price, best_bid_quantity = this_orderbook[b"B"].peekitem(0)
+                best_ask_price, best_ask_quantity = this_orderbook[b"S"].peekitem(0)
+                self.transactions[orderbook_no].append(self.Transaction(
+                    timestamp=timestamp,
+                    price=price,
+                    size=executed_quantity,
+                    best_bid=best_bid_price,
+                    best_ask=best_ask_price,
+                    best_ask_quantity=best_ask_quantity,
+                    best_bid_quantity=best_bid_quantity,
+                ))
+                # update the order book
+                this_orderbook = this_orderbook[book_side]
+                this_orderbook[price] -= executed_quantity
+                best_price, best_quantity = this_orderbook.peekitem(0)
+                if price == best_price:
+                    if best_quantity == 0:
+                        # if there is no quantity left at that price, we remove
+                        # this price level and note that there's a new best price
+                        this_orderbook.pop(price)
+                        best_price, best_quantity = this_orderbook.peekitem(0)
+                        self.best_bid_ask[orderbook_no].append(self.NewBestPrice(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity)
+                            new_best_price=best_price)
                         )
-                    # if price was not at best, but there's no quantity outstanding
-                    # we remove this price level
-                    elif this_orderbook[price] == 0:
-                        this_orderbook.pop(price)
+                    # in any case, if the price was at best, we note the new best quantity
+                    self.best_depths[orderbook_no].append(self.NewBestQuantity(
+                        timestamp=timestamp,
+                        book_side=book_side,
+                        new_best_quantity=best_quantity)
+                    )
+                # if price was not at best, but there's no quantity outstanding
+                # we remove this price level
+                elif this_orderbook[price] == 0:
+                    this_orderbook.pop(price)
 
 
             # Order Executed With Price message
@@ -310,11 +302,10 @@ class SingleDayIMIData(object):
                 if this_order["quantity_outstanding"] == 0:
                     self.orders.pop(order_no)
                 # update the order book
-                if orderbook_no in self.blue_chip_orderbooks:
-                    this_orderbook = self.orderbooks[orderbook_no][book_side]
-                    this_orderbook[price] -= executed_quantity
-                    if this_orderbook[price] == 0:
-                        this_orderbook.pop(price)
+                this_orderbook = self.orderbooks[orderbook_no][book_side]
+                this_orderbook[price] -= executed_quantity
+                if this_orderbook[price] == 0:
+                    this_orderbook.pop(price)
 
 
             # Orderbook Directory message
