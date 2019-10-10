@@ -25,6 +25,8 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
     # dealing with NaNs is important for return calculation below
     resampled_high_freq.dropna(inplace=True)
     num_obs = resampled_high_freq.shape[0]
+    if num_obs == 0:
+        return np.nan
     # taking log of the mid price (and scaling by 100)
     resampled_high_freq = np.log(resampled_high_freq) * 100
     log_returns = (resampled_high_freq - resampled_high_freq.shift(1))
@@ -34,7 +36,6 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
 
     # low sampling frequency (long timescale)
     low_sampling_frequency = pd.Timedelta(5, "minutes")
-    # low_sampling_frequency  = (high_sampling_frequency * (num_obs ** (2/3))).ceil("1T")
     frac = high_sampling_frequency / pd.Timedelta(1, "minute")
     offsets = [
         frac * multiple

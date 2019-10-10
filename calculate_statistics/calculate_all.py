@@ -82,12 +82,12 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
 
         # transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
-        try:
-            transactions.set_index("timestamp", inplace=True)
-        except KeyError:
-            # in case there are no transactions
+        if transactions.empty:
             continue
+        transactions.set_index("timestamp", inplace=True)
         transactions = transactions.loc[start_microsecond:end_microsecond]
+        if transactions.empty:
+            continue
         transactions["mid"] = (transactions["best_ask"] +
                                transactions["best_bid"]) * 0.5
         transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
