@@ -51,15 +51,22 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame,
     # if there are still strange values, we remove them
     best_bid_ask = best_bid_ask[best_bid_ask["quoted_spread"] >= 0]
 
-    time_weighted_quoted_spread = np.sum(
-        best_bid_ask["quoted_spread"] *
-        best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
-    time_weighted_relative_quoted_spread_bps = np.sum(
-        best_bid_ask["relative_quoted_spread_bps"] *
-        best_bid_ask["time_validity"]) / best_bid_ask["time_validity"].sum()
-    return {
-        "time_weighted_quoted_spread":
-            time_weighted_quoted_spread,
-        "time_weighted_relative_quoted_spread_bps":
-            time_weighted_relative_quoted_spread_bps
-    }
+    total_time = best_bid_ask["time_validity"].sum()
+    if total_time > 0:
+        time_weighted_quoted_spread = np.sum(
+            best_bid_ask["quoted_spread"] *
+            best_bid_ask["time_validity"]) / total_time
+        time_weighted_relative_quoted_spread_bps = np.sum(
+            best_bid_ask["relative_quoted_spread_bps"] *
+            best_bid_ask["time_validity"]) / total_time
+        return {
+            "time_weighted_quoted_spread":
+                time_weighted_quoted_spread,
+            "time_weighted_relative_quoted_spread_bps":
+                time_weighted_relative_quoted_spread_bps
+        }
+    else:
+        return {
+            "time_weighted_quoted_spread": np.nan,
+            "time_weighted_relative_quoted_spread_bps": np.nan
+        }

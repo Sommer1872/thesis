@@ -68,7 +68,11 @@ def calculate_realized_vola_stats(transactions: pd.DataFrame):
     TSRV = 1 / (1 - n_bar / num_obs) * TSRV  #/ sum(delta))
 
     Delta = 1 / num_obs
-    signal_to_noise = 2 * noise_var_TSRV / (TSRV * Delta + 2 * noise_var_TSRV)
+    denom = (TSRV * Delta + 2 * noise_var_TSRV)
+    if denom > 0:
+        signal_to_noise = 2 * noise_var_TSRV / denom
+    else:
+        signal_to_noise = np.nan
 
     stats = dict(TSRV=TSRV,
                  noise_var_TSRV=noise_var_TSRV,

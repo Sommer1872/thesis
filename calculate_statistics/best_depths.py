@@ -41,8 +41,10 @@ def calculate_best_depth_statistics(best_depths: pd.DataFrame,
             best_depths = best_depths[(best_depths.index < event.timestamp) |
                                       (best_depths.index > event.until)]
 
-    time_weighted_average_depth = np.sum(
-        best_depths["depth_at_best"] *
-        best_depths["time_validity"]) / best_depths["time_validity"].sum()
-
-    return {"time_weighted_average_depth": time_weighted_average_depth}
+    total_time = best_depths["time_validity"].sum()
+    if total_time > 0:
+        # time weighted average depth
+        twad = np.sum(best_depths["depth_at_best"] * best_depths["time_validity"]) / total_time
+        return {"time_weighted_average_depth": twad}
+    else:
+        return {"time_weighted_average_depth": np.nan}

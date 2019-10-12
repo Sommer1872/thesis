@@ -13,6 +13,7 @@ from typing import Dict, List, Iterator
 
 # third-party packages
 import pandas as pd
+import pickle
 from tqdm import tqdm
 
 from calculate_statistics.calculate_all import calculate_orderbook_stats
@@ -23,17 +24,26 @@ from daily_statistics.process import process_daily_statistics
 def main():
 
     data_path = Path.home() / "data/ITCH_market_data/unzipped"
-    binary_file_paths = data_path.glob("*.bin")
+    pattern = "*2019*.bin"
+    print(f"Considering files with pattern {pattern}")
+    binary_file_paths = data_path.glob(pattern)
 
-    num_files = len(list(data_path.glob("*.bin")))
+    num_files = len(list(data_path.glob(pattern)))
     print(f"\nProcessing {num_files} trading days...")
     daily_stats = load_and_process_all(binary_file_paths)
 
     print(f"\nProcessing results...")
+    # Save to pickle just to be safe
+    os.makedirs("daily_statistics/stats", exist_ok=True)
+    timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
+    filepath = Path(f"daily_statistics/stats/{timestamp}_daily_stats.pickle")
+    with open(filepath, "wb") as output_file:
+        pickle.dump(daily_stats, output_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # further processing
     results = process_daily_statistics(daily_stats)
 
-    timestamp = str(pd.Timestamp("now").ceil("1s")).replace(":", "-")
-    os.makedirs("daily_statistics/stats", exist_ok=True)
+    timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
     filepath = Path(f"daily_statistics/stats/{timestamp}_daily_stats.csv")
     results.to_csv(filepath, float_format="%g")
     print(f"Saved daily statistics file to {filepath}")
