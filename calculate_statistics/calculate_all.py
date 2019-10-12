@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Any, Dict, Union
 
 import pandas as pd
+import numpy as np
 
 from calculate_statistics.best_bid_ask import calculate_best_bid_ask_statistics
 from calculate_statistics.best_depths import calculate_best_depth_statistics

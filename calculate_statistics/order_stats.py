@@ -45,11 +45,14 @@ def calculate_order_stats(order_stats: pd.DataFrame,
     order_stats[["price", "best_price", "distance_to_best", "tick_size"]] /= 10**metainfo.price_decimals
     value_entered = np.sum(close_to_best["price"] * close_to_best["quantity_entered"])
     value_filled = np.sum(close_to_best["price"] * close_to_best["quantity_filled"])
-    fill_ratio = value_filled / value_entered
+    if value_entered > 0:
+        fill_ratio = value_filled / value_entered
+    else:
+        fill_ratio = np.nan
 
     stats = dict()
-    stats["average_time_to_fill"] = time_to_fill["mean"]
-    stats["median_time_to_fill"] = time_to_fill["50%"]
+    stats["average_time_to_fill"] = time_to_fill.get("mean", np.nan)
+    stats["median_time_to_fill"] = time_to_fill.get("50%", np.nan)
     stats["value_entered"] = value_entered
     stats["value_filled"] = value_filled
     stats["fill_ratio"] = fill_ratio

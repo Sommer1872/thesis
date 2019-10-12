@@ -40,7 +40,7 @@ def process_daily_statistics(results: List[Dict]) -> pd.DataFrame:
             # order_stats
             order_stats = this_orderbook_stats["order_stats"]
             if order_stats:
-                for measure, value in order_stats.items()
+                for measure, value in order_stats.items():
                     metadata.loc[orderbook_no, measure] = value
 
             # realized vola
