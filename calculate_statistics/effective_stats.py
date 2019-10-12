@@ -14,9 +14,6 @@ def calculate_effective_statistics(transactions: pd.DataFrame, metainfo: pd.Seri
                                                      transactions["mid"]) * 100
 
     # spread leeway using tick sizes and an unequal join
-    tick_sizes = tick_sizes.reset_index()
-    tick_sizes.columns = ["tick_size", "price_start"]
-    tick_sizes["price_end"] = tick_sizes["price_start"].shift(fill_value=np.inf)
     price_decimals = 10**metainfo.price_decimals
     tick_sizes /= price_decimals
     # unequal join

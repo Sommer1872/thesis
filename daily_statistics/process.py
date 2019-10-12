@@ -37,6 +37,12 @@ def process_daily_statistics(results: List[Dict]) -> pd.DataFrame:
                          "time_weighted_average_depth"] = best_depth_stats[
                              "time_weighted_average_depth"]
 
+            # order_stats
+            order_stats = this_orderbook_stats["order_stats"]
+            if order_stats:
+                for measure, value in order_stats.items()
+                    metadata.loc[orderbook_no, measure] = value
+
             # realized vola
             realized_vola_stats = this_orderbook_stats.get("realized_vola_stats",
                                                            dict())

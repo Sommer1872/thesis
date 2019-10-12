@@ -9,6 +9,7 @@ import pandas as pd
 
 from calculate_statistics.best_bid_ask import calculate_best_bid_ask_statistics
 from calculate_statistics.best_depths import calculate_best_depth_statistics
+from calculate_statistics.order_stats import calculate_order_stats
 from calculate_statistics.snapshots import calculate_snapshot_statistics
 from calculate_statistics.effective_stats import calculate_effective_statistics
 from calculate_statistics.realized_vola import calculate_realized_vola_stats
@@ -46,6 +47,9 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         tick_table_id = int(metainfo.price_tick_table_id)
         tick_sizes = pd.DataFrame.from_dict(
             this_day_imi_data.price_tick_sizes[tick_table_id], orient="index")
+        tick_sizes = tick_sizes.reset_index()
+        tick_sizes.columns = ["tick_size", "price_start"]
+        tick_sizes["price_end"] = tick_sizes["price_start"].shift(fill_value=np.inf)
 
         # trading actions (such as stop trading events)
         trading_actions = pd.DataFrame(
@@ -79,6 +83,12 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         snapshot_stats = calculate_snapshot_statistics(snapshots, trading_actions,
                                                        metainfo)
         this_orderbook_stats["snapshot_stats"] = snapshot_stats
+
+        # order_stats
+        order_stats = pd.DataFrame.from_dict(this_day_imi_data.order_stats[orderbook_no], orient="index")
+        this_orderbook_stats["order_stats"] = calculate_order_stats(
+            order_stats, trading_actions, metainfo, tick_sizes,
+            start_microsecond, end_microsecond)
 
         # transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])

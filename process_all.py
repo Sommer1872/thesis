@@ -17,7 +17,7 @@ import pickle
 from tqdm import tqdm
 
 from calculate_statistics.calculate_all import calculate_orderbook_stats
-from process_messages.orderbook_stats import SingleDayIMIData
+from process_messages.process_one_day import SingleDayIMIData
 from daily_statistics.process import process_daily_statistics
 
 

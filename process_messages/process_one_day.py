@@ -48,6 +48,7 @@ class SingleDayIMIData(object):
         self.price_tick_sizes = defaultdict(dict)
         self.metadata = defaultdict(dict)
         self.snapshots = defaultdict(dict)
+        self.order_stats = defaultdict(dict)
 
         self.transactions = defaultdict(list)
         self.best_bid_ask = defaultdict(list)
@@ -100,12 +101,20 @@ class SingleDayIMIData(object):
                 this_orderbook[price] += quantity
                 # record if price was at best
                 best_price, best_quantity = this_orderbook.peekitem(0)
+                this_order_statistics = {"entry_time": timestamp,
+                         "price": price,
+                         "best_price": best_price,
+                         "quantity_entered": quantity,
+                         "quantity_filled": 0,
+                         "first_fill_time": None,
+                         "remove_time": None}
+                self.order_stats[orderbook_no][order_no] = this_order_statistics
                 if price == best_price:
                     self.best_depths[orderbook_no].append(
                         self.NewBestQuantity(timestamp=timestamp,
                                              book_side=book_side,
                                              new_best_quantity=best_quantity))
-                    # if it's the only one at the best price
+                    # if it's price setting
                     if quantity == best_quantity:
                         self.best_bid_ask[orderbook_no].append(
                             self.NewBestPrice(timestamp=timestamp,
@@ -137,9 +146,10 @@ class SingleDayIMIData(object):
                 order_no = message[1]
                 this_order = self.orders[order_no]
                 self.orders.pop(order_no)
-                # update the order book
                 orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
                     this_order)
+                self.order_stats[orderbook_no][order_no]["remove_time"] = timestamp
+                # update the order book
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
                 this_orderbook[price] -= quantity_outstanding
                 best_price, best_quantity = this_orderbook.peekitem(0)
@@ -170,11 +180,10 @@ class SingleDayIMIData(object):
                 # old order
                 old_order_no = message[1]
                 old_order = self.orders[old_order_no]
-                old_order_price = old_order["price"]
-                old_quantity_outstanding = old_order["quantity_outstanding"]
-                book_side = old_order["book_side"]
-                orderbook_no = old_order["orderbook_no"]
+                orderbook_no, book_side, old_order_price, old_quantity_outstanding = self.get_order_info(
+                    old_order)
                 self.orders.pop(old_order_no)
+                self.order_stats[orderbook_no][old_order_no]["remove_time"] = timestamp
                 # new order
                 new_order_no = message[2]
                 quantity = message[3]
@@ -211,9 +220,17 @@ class SingleDayIMIData(object):
                 elif this_orderbook[old_order_price] == 0:
                     this_orderbook.pop(old_order_price)
                 # new order
+                best_price, best_quantity = this_orderbook.peekitem(0)
+                this_order_statistics = {"entry_time": timestamp,
+                         "price": price,
+                         "best_price": best_price,
+                         "quantity_entered": quantity,
+                         "quantity_filled": 0,
+                         "first_fill_time": None,
+                         "remove_time": None}
+                self.order_stats[orderbook_no][new_order_no] = this_order_statistics
                 this_orderbook[price] += quantity
                 # record if price was at best
-                best_price, best_quantity = this_orderbook.peekitem(0)
                 if price == best_price:
                     self.best_depths[orderbook_no].append(
                         self.NewBestQuantity(timestamp=timestamp,
@@ -240,6 +257,11 @@ class SingleDayIMIData(object):
                     this_order)
                 if quantity_outstanding == 0:
                     self.orders.pop(order_no)
+                # update order stats
+                this_order_statistics = self.order_stats[orderbook_no][order_no]
+                this_order_statistics["quantity_filled"] += executed_quantity
+                if not this_order_statistics.get("first_fill_time"):
+                    this_order_statistics["first_fill_time"] = timestamp
                 # order book
                 this_orderbook = self.orderbooks[orderbook_no]
                 # info to calculate effective spreads
@@ -282,7 +304,7 @@ class SingleDayIMIData(object):
             # Order Executed With Price message
             elif message_type == b"C":
                 message = self.unpack(">iqiqsi", message)
-                # timestamp = self.microseconds + message[0] * 1e-3
+                timestamp = self.microseconds + int(message[0] * 1e-3)
                 order_no = message[1]
                 executed_quantity = message[2]
                 # match_number = message[3]
@@ -295,6 +317,11 @@ class SingleDayIMIData(object):
                 # update the order
                 if this_order["quantity_outstanding"] == 0:
                     self.orders.pop(order_no)
+                # update order stats
+                this_order_statistics = self.order_stats[orderbook_no][order_no]
+                this_order_statistics["quantity_filled"] += executed_quantity
+                if not this_order_statistics.get("first_fill_time"):
+                    this_order_statistics["first_fill_time"] = timestamp
                 # update the order book
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
                 this_orderbook[price] -= executed_quantity
