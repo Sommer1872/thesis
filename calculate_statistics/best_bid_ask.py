@@ -25,7 +25,10 @@ def calculate_best_bid_ask_statistics(best_bid_ask: pd.DataFrame,
     del best_bid_ask[" "]
     # if we do not have updates on both book sides
     if not best_bid_ask.shape[1] == 2:
-        return np.nan
+        return {
+            "time_weighted_quoted_spread": np.nan,
+            "time_weighted_relative_quoted_spread_bps": np.nan
+        }
     # get prices in chf
     best_bid_ask = best_bid_ask / price_decimals
     # remember cases when there are not orders on both sides of the order book

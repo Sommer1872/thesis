@@ -34,9 +34,10 @@ def main():
 
     print(f"\nProcessing results...")
     # Save to pickle just to be safe
-    os.makedirs("daily_statistics/stats", exist_ok=True)
+    stats_path = Path("daily_statistics/stats")
+    stats_path.mkdir(exist_ok=True)
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
-    filepath = Path(f"daily_statistics/stats/{timestamp}_daily_stats.pickle")
+    filepath = stats_path / f"{timestamp}_daily_stats.pickle"
     with open(filepath, "wb") as output_file:
         pickle.dump(daily_stats, output_file, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -44,7 +45,7 @@ def main():
     results = process_daily_statistics(daily_stats)
 
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
-    filepath = Path(f"daily_statistics/stats/{timestamp}_daily_stats.csv")
+    filepath = stats_path / f"{timestamp}_daily_stats.csv"
     results.to_csv(filepath, float_format="%g")
     print(f"Saved daily statistics file to {filepath}")
 
