@@ -43,8 +43,8 @@ def unzip_one_file(zipped_file_path: Path):
 def unzip_all(file_paths: List[Path]) -> List[str]:
     with Pool(processes=os.cpu_count() - 1) as pool:
         results = list(
-            tqdm(pool.imap_unordered(unzip_one_file, file_paths),
-                 total=len(file_paths)))
+            tqdm(pool.imap_unordered(unzip_one_file, file_paths), total=len(file_paths))
+        )
         return results
 
 

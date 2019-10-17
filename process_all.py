@@ -7,13 +7,10 @@ from multiprocessing import Pool
 import os
 from pathlib import Path
 import pickle
-import sys
-import time
-from typing import Dict, List, Iterator
+from typing import List, Iterator
 
 # third-party packages
 import pandas as pd
-import pickle
 from tqdm import tqdm
 
 from calculate_statistics.calculate_all import calculate_orderbook_stats
@@ -22,6 +19,9 @@ from daily_statistics.process import process_daily_statistics
 
 
 def main():
+
+    start_time = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
+    print(f"Started at {start_time}")
 
     data_path = Path.home() / "data/ITCH_market_data/unzipped"
     pattern = "*2019*.bin"
@@ -55,7 +55,9 @@ def main():
 def load_and_process_all(file_paths: Iterator[Path]) -> List[tuple]:
     with Pool(processes=os.cpu_count() - 1) as pool:
         results = list()
-        parallel_processes = pool.imap_unordered(load_and_process_orderbook_stats, file_paths)
+        parallel_processes = pool.imap_unordered(
+            load_and_process_orderbook_stats, file_paths
+        )
         for result in tqdm(parallel_processes):
             results.append(result)
     return results
