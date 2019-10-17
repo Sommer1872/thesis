@@ -56,7 +56,7 @@ def calculate_order_stats(
     # only look at orders that have been entered at most 1 tick away from best
     columns = ["price", "quantity_entered", "quantity_filled", "distance_in_ticks"]
     close_to_best = order_stats.loc[order_stats.distance_in_ticks <= 1, columns]
-    order_stats[["price", "best_price", "distance_to_best", "tick_size"]] /= (
+    close_to_best[["price", "best_price", "distance_to_best", "tick_size"]] /= (
         10 ** metainfo.price_decimals
     )
     value_entered = np.sum(close_to_best["price"] * close_to_best["quantity_entered"])
