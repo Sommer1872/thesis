@@ -85,7 +85,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             this_day_imi_data.snapshots[orderbook_no], orient="index"
         )
         snapshots = snapshots.loc[
-            int(start_microsecond * 1e-6) : int(end_microsecond * 1e-6)
+            int(start_microsecond * 1e-6): int(end_microsecond * 1e-6)
         ]
         snapshot_stats = calculate_snapshot_statistics(
             snapshots, trading_actions, metainfo
@@ -118,13 +118,11 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         ) * 0.5
         transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
 
-        # effective_spreads
-        aggregated_statistics, transaction_statistics = calculate_effective_statistics(
+        # trade statistics
+        aggregated_statistics = calculate_effective_statistics(
             transactions, metainfo, tick_sizes
         )
-
-        this_orderbook_stats["transaction_statistics"] = transaction_statistics
-        this_orderbook_stats["aggregated_stats"] = aggregated_statistics
+        this_orderbook_stats["transaction_stats"] = aggregated_statistics
 
         if transactions.shape[0] > 200:
             # realized volatility

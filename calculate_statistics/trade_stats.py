@@ -37,11 +37,10 @@ def calculate_effective_statistics(
     # group per microsecond to aggregate single trades
     grouped = transactions.groupby(["timestamp", "price"])
     aggregated = grouped[
-        ["effective_spread", "relative_effective_spread_bps", "spread_leeway", "tick_size"]
+        ["price", "effective_spread", "relative_effective_spread_bps", "spread_leeway", "tick_size"]
     ].mean()
     aggregated["trade_value"] = grouped["trade_value"].sum()
 
     aggregated_statistics = aggregated.describe()
-    transaction_statistics = transactions.describe()
 
-    return (aggregated_statistics, transaction_statistics)
+    return aggregated_statistics

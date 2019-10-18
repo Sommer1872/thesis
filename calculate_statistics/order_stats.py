@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 """
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -65,20 +67,26 @@ def calculate_order_stats(
     close_to_best["value_filled"] = close_to_best["price"] * close_to_best["quantity_filled"]
 
     stats = dict()
-    stats["average_time_to_fill"] = time_to_fill.get("mean", np.nan)
-    stats["median_time_to_fill"] = time_to_fill.get("50%", np.nan)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
 
-    stats["mean_value_entered"] = np.mean(close_to_best["value_entered"])
-    stats["median_value_entered"] = np.median(close_to_best["value_entered"])
-    stats["total_value_entered"] = np.sum(close_to_best["value_entered"])
+        stats["average_time_to_fill"] = time_to_fill.get("mean", np.nan)
+        stats["median_time_to_fill"] = time_to_fill.get("50%", np.nan)
 
-    stats["mean_value_filled"] = np.mean(close_to_best["value_filled"])
-    stats["median_value_filled"] = np.median(close_to_best["value_filled"])
-    stats["total_value_filled"] = np.sum(close_to_best["value_filled"])
+        stats["mean_value_entered"] = np.mean(close_to_best["value_entered"])
+        stats["median_value_entered"] = np.median(close_to_best["value_entered"])
+        stats["total_value_entered"] = np.sum(close_to_best["value_entered"])
 
-    stats["mean_fill_ratio"] = np.mean(close_to_best["value_filled"] / close_to_best["value_entered"])
-    stats["median_fill_ratio"] = np.median(close_to_best["value_filled"] / close_to_best["value_entered"])
-    stats["total_fill_ratio"] = np.sum(close_to_best["value_filled"]) / np.sum(close_to_best["value_entered"])
+        stats["mean_value_filled"] = np.mean(close_to_best["value_filled"])
+        stats["median_value_filled"] = np.median(close_to_best["value_filled"])
+        stats["total_value_filled"] = np.sum(close_to_best["value_filled"])
+
+        stats["mean_fill_ratio"] = np.mean(close_to_best["value_filled"] / close_to_best["value_entered"])
+        stats["median_fill_ratio"] = np.median(close_to_best["value_filled"] / close_to_best["value_entered"])
+        if stats["total_value_entered"] > 0:
+            stats["total_fill_ratio"] = stats["total_value_filled"] / stats["total_value_entered"]
+        else:
+            stats["total_fill_ratio"] = 0
 
     return stats
 
