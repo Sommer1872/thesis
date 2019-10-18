@@ -62,37 +62,35 @@ def process_daily_statistics(results: List[Dict]) -> pd.DataFrame:
                 ]
 
             # transactions
-            # for measure in ["transaction_stats", "aggregated_stats"]:
             measure = "aggregated_stats"
             transaction_stats = this_orderbook_stats.get(measure, pd.DataFrame())
-            measure = measure.replace("_stats", "")
             if not transaction_stats.empty:
                 metadata.loc[
-                    orderbook_no, f"mean_effective_spread_{measure}"
+                    orderbook_no, f"mean_effective_spread"
                 ] = transaction_stats.loc["mean", "effective_spread"]
                 metadata.loc[
-                    orderbook_no, f"median_effective_spread_{measure}"
+                    orderbook_no, f"median_effective_spread"
                 ] = transaction_stats.loc["50%", "effective_spread"]
                 metadata.loc[
-                    orderbook_no, f"mean_relative_effective_spread_bps_{measure}"
+                    orderbook_no, f"mean_relative_effective_spread_bps"
                 ] = transaction_stats.loc["mean", "relative_effective_spread_bps"]
                 metadata.loc[
-                    orderbook_no, f"median_relative_effective_spread_bps_{measure}"
+                    orderbook_no, f"median_relative_effective_spread_bps"
                 ] = transaction_stats.loc["50%", "relative_effective_spread_bps"]
                 metadata.loc[
-                    orderbook_no, f"mean_spread_leeway_{measure}"
+                    orderbook_no, f"mean_spread_leeway"
                 ] = transaction_stats.loc["mean", "spread_leeway"]
                 metadata.loc[
-                    orderbook_no, f"median_spread_leeway_{measure}"
+                    orderbook_no, f"median_spread_leeway"
                 ] = transaction_stats.loc["50%", "spread_leeway"]
                 metadata.loc[
-                    orderbook_no, f"mean_trade_value_{measure}"
+                    orderbook_no, f"mean_trade_value"
                 ] = transaction_stats.loc["mean", "trade_value"]
                 metadata.loc[
-                    orderbook_no, f"median_trade_value_{measure}"
+                    orderbook_no, f"median_trade_value"
                 ] = transaction_stats.loc["50%", "trade_value"]
                 metadata.loc[
-                    orderbook_no, f"mean_tick_size_{measure}"
+                    orderbook_no, f"mean_tick_size"
                 ] = transaction_stats.loc["mean", "tick_size"]
         all_results.append(metadata)
 
