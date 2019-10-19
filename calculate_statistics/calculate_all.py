@@ -105,7 +105,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             end_microsecond,
         )
 
-        # transactions
+        # preprocess transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
         if transactions.empty:
             continue

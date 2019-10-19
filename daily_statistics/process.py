@@ -63,14 +63,8 @@ def process_daily_statistics(date_stats: Dict[str, Any]) -> pd.DataFrame:
         transaction_stats = this_orderbook_stats.get(measure, pd.DataFrame())
         if not transaction_stats.empty:
             metadata.loc[
-                orderbook_no, f"mean_eff_spread"
-            ] = transaction_stats.loc["mean", "effective_spread"]
-            metadata.loc[
                 orderbook_no, f"median_eff_spread"
             ] = transaction_stats.loc["50%", "effective_spread"]
-            metadata.loc[
-                orderbook_no, f"mean_rel_eff_spread_bps"
-            ] = transaction_stats.loc["mean", "relative_effective_spread_bps"]
             metadata.loc[
                 orderbook_no, f"median_rel_eff_spread_bps"
             ] = transaction_stats.loc["50%", "relative_effective_spread_bps"]
@@ -89,4 +83,7 @@ def process_daily_statistics(date_stats: Dict[str, Any]) -> pd.DataFrame:
             metadata.loc[
                 orderbook_no, f"mean_tick_size"
             ] = transaction_stats.loc["mean", "tick_size"]
+            metadata.loc[
+                orderbook_no, f"mean_price"
+            ] = transaction_stats.loc["mean", "price"]
     return metadata
