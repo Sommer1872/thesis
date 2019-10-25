@@ -17,8 +17,10 @@ def load_frag_data() -> pd.DataFrame:
 
     # calculate fragmentation index (Gresse, 2017, JFM, p. 6)
     frag["market_volume"] = frag.groupby(["date", "share_class_id_bb_global"])["volume"].sum()
-    frag["market_share_squared"] = (frag["volume"] / frag["market_volume"]) ** 2
-    frag["fragmentation_index"] = 1 / frag.groupby(["date", "share_class_id_bb_global"])["market_share_squared"].sum()
+    frag["market_share"] = frag["volume"] / frag["market_volume"]
+    frag["market_share_squared"] = frag["market_share"] ** 2
+    frag["non_fragmentation_index"] = frag.groupby(["date", "share_class_id_bb_global"])["market_share_squared"].sum()
+    # frag["inverse_market_share"] = 1 / (frag["volume"] / frag["market_volume"])
 
     frag.reset_index("share_class_id_bb_global", inplace=True)
     del frag["market_share_squared"]

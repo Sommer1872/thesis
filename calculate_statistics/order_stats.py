@@ -38,7 +38,6 @@ def calculate_order_stats(
     order_stats["time_to_fill"] = (
         order_stats["first_fill_time"] - order_stats.index
     ) / 1000
-    time_to_fill = order_stats["time_to_fill"].describe()
 
     # distance to best price, also in number of ticks
     order_stats["distance_to_best"] = abs(
@@ -59,19 +58,31 @@ def calculate_order_stats(
         10 ** metainfo.price_decimals
     )
 
+    stats = dict()
+
+    stats["total_num_orders"] = order_stats.shape[0]
+    counts = order_stats["first_fill_time"].isna().value_counts()
+    for nan_indicator in counts.index:
+        num_orders = counts[nan_indicator]
+        if nan_indicator is True:
+            stats["num_orders_deleted"] = num_orders
+        else:
+            stats["num_orders_filled"] = num_orders
+
     # only look at orders that have been entered at most 1 tick away from best
-    columns = ["price", "quantity_entered", "quantity_filled", "distance_in_ticks"]
+    columns = ["price", "quantity_entered", "quantity_filled", "distance_in_ticks", "time_to_fill"]
     close_to_best = order_stats.loc[order_stats.distance_in_ticks <= 1, columns]
+
+    time_to_fill_stats = close_to_best["time_to_fill"].describe()
 
     close_to_best["value_entered"] = close_to_best["price"] * close_to_best["quantity_entered"]
     close_to_best["value_filled"] = close_to_best["price"] * close_to_best["quantity_filled"]
 
-    stats = dict()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 
-        stats["average_time_to_fill"] = time_to_fill.get("mean", np.nan)
-        stats["median_time_to_fill"] = time_to_fill.get("50%", np.nan)
+        stats["average_time_to_fill"] = time_to_fill_stats.get("mean", np.nan)
+        stats["median_time_to_fill"] = time_to_fill_stats.get("50%", np.nan)
 
         stats["mean_value_entered"] = np.mean(close_to_best["value_entered"])
         stats["median_value_entered"] = np.median(close_to_best["value_entered"])
