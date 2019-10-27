@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 """
-from collections import namedtuple
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 
 
-def calculate_realized_vola_stats(transactions: pd.DataFrame):
+def calculate_realized_vola_stats(transactions: pd.DataFrame) -> Dict[str, float]:
 
     # change the index to pandas Timestamps
     transactions.reset_index(inplace=True)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 """
+from typing import Dict
 import numpy as np
 import pandas as pd
 
@@ -11,7 +12,7 @@ def calculate_best_bid_ask_statistics(
     metainfo: pd.Series,
     start_microsecond: int,
     end_microsecond: int,
-) -> pd.DataFrame:
+) -> Dict[str, float]:
 
     price_decimals = 10 ** metainfo.price_decimals
 

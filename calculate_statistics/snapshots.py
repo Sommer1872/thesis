@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 """
+from typing import Dict
 import pandas as pd
 
 
 def calculate_snapshot_statistics(
     snapshots: pd.DataFrame, trading_actions: pd.DataFrame, metainfo: pd.Series
-) -> pd.DataFrame:
+) -> Dict[str, float]:
     price_decimals = 10 ** metainfo.price_decimals
     # don't include market orders in spread calculations
     snapshots = snapshots[
@@ -36,5 +37,13 @@ def calculate_snapshot_statistics(
     # if there are still strange values, we remove them
     snapshots = snapshots[snapshots["quoted_spread"] >= 0]
 
-    statistics = snapshots.describe()
-    return statistics
+    snapshot_stats = snapshots.describe()
+
+    stats = {
+        "quoted_rel_spread_bps_mean": snapshot_stats.loc["mean", "relative_quoted_spread_bps"],
+        "quoted_rel_spread_bps_median": snapshot_stats.loc["50%", "relative_quoted_spread_bps"],
+        "depth_at_best_mean": snapshot_stats.loc["mean", "depth_at_best"],
+        "depth_at_best_median": snapshot_stats.loc["50%", "depth_at_best"],
+    }
+
+    return stats
