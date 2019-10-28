@@ -87,7 +87,7 @@ class SingleDayIMIData(object):
 
             message_length = self.data[self.current_position + 1]
             message_type = self.data[
-                self.current_position + 2: self.current_position + 3
+                self.current_position + 2 : self.current_position + 3
             ]
             message_start = self.current_position + 3
             message_end = self.current_position + message_length + 2

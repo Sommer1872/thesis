@@ -73,9 +73,7 @@ def load_and_process_orderbook_stats(file_path: Path):
 def combine_daily_statistics(daily_stats: List[Dict]):
     with Pool(processes=os.cpu_count() - 1) as pool:
         all_results = list()
-        parallel_processes = pool.imap_unordered(
-            process_daily_statistics, daily_stats
-        )
+        parallel_processes = pool.imap_unordered(process_daily_statistics, daily_stats)
         for daily_result in tqdm(parallel_processes):
             all_results.append(daily_result)
 

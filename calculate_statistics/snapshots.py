@@ -40,8 +40,12 @@ def calculate_snapshot_statistics(
     snapshot_stats = snapshots.describe()
 
     stats = {
-        "quoted_rel_spread_bps_mean": snapshot_stats.loc["mean", "relative_quoted_spread_bps"],
-        "quoted_rel_spread_bps_median": snapshot_stats.loc["50%", "relative_quoted_spread_bps"],
+        "quoted_rel_spread_bps_mean": snapshot_stats.loc[
+            "mean", "relative_quoted_spread_bps"
+        ],
+        "quoted_rel_spread_bps_median": snapshot_stats.loc[
+            "50%", "relative_quoted_spread_bps"
+        ],
         "depth_at_best_mean": snapshot_stats.loc["mean", "depth_at_best"],
         "depth_at_best_median": snapshot_stats.loc["50%", "depth_at_best"],
     }

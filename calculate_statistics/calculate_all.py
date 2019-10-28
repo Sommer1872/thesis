@@ -85,7 +85,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             this_day_imi_data.snapshots[orderbook_no], orient="index"
         )
         snapshots = snapshots.loc[
-            int(start_microsecond * 1e-6): int(end_microsecond * 1e-6)
+            int(start_microsecond * 1e-6) : int(end_microsecond * 1e-6)
         ]
         snapshot_stats = calculate_snapshot_statistics(
             snapshots, trading_actions, metainfo

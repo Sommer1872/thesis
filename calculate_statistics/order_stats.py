@@ -71,13 +71,23 @@ def calculate_order_stats(
             stats["num_orders_filled"] = num_orders
 
     # only look at orders that have been entered at most 1 tick away from best
-    columns = ["price", "quantity_entered", "quantity_filled", "distance_in_ticks", "time_to_fill"]
+    columns = [
+        "price",
+        "quantity_entered",
+        "quantity_filled",
+        "distance_in_ticks",
+        "time_to_fill",
+    ]
     close_to_best = order_stats.loc[order_stats.distance_in_ticks <= 1, columns]
 
     time_to_fill_stats = close_to_best["time_to_fill"].describe()
 
-    close_to_best["value_entered"] = close_to_best["price"] * close_to_best["quantity_entered"]
-    close_to_best["value_filled"] = close_to_best["price"] * close_to_best["quantity_filled"]
+    close_to_best["value_entered"] = (
+        close_to_best["price"] * close_to_best["quantity_entered"]
+    )
+    close_to_best["value_filled"] = (
+        close_to_best["price"] * close_to_best["quantity_filled"]
+    )
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -93,10 +103,16 @@ def calculate_order_stats(
         stats["value_filled_median"] = np.median(close_to_best["value_filled"])
         stats["value_filled_total"] = np.sum(close_to_best["value_filled"])
 
-        stats["fill_ratio_mean"] = np.mean(close_to_best["value_filled"] / close_to_best["value_entered"])
-        stats["fill_ratio_median"] = np.median(close_to_best["value_filled"] / close_to_best["value_entered"])
+        stats["fill_ratio_mean"] = np.mean(
+            close_to_best["value_filled"] / close_to_best["value_entered"]
+        )
+        stats["fill_ratio_median"] = np.median(
+            close_to_best["value_filled"] / close_to_best["value_entered"]
+        )
         if stats["value_entered_total"] > 0:
-            stats["fill_ratio_total"] = stats["value_filled_total"] / stats["value_entered_total"]
+            stats["fill_ratio_total"] = (
+                stats["value_filled_total"] / stats["value_entered_total"]
+            )
         else:
             stats["fill_ratio_total"] = 0
 
