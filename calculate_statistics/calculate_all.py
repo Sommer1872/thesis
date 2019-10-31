@@ -124,11 +124,10 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         )
         this_orderbook_stats["transaction_stats"] = aggregated_statistics
 
-        if transactions.shape[0] > 200:
-            # realized volatility
-            this_orderbook_stats["realized_vola_stats"] = calculate_realized_vola_stats(
-                transactions
-            )
+        # realized volatility
+        this_orderbook_stats["realized_vola_stats"] = calculate_realized_vola_stats(
+            transactions
+        )
 
     results = {
         "date": this_day_imi_data.date,
