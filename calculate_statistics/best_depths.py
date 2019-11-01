@@ -53,6 +53,6 @@ def calculate_best_depth_statistics(
             np.sum(best_depths["depth_at_best"] * best_depths["time_validity"])
             / total_time
         )
-        return {"time_weighted_average_depth": twad}
+        return {"depth_time_weighted_average": twad}
     else:
-        return {"time_weighted_average_depth": np.nan}
+        return {"depth_time_weighted_average": np.nan}

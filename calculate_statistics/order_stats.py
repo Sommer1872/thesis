@@ -61,7 +61,7 @@ def calculate_order_stats(
 
     stats = dict()
 
-    stats["total_num_orders"] = order_stats.shape[0]
+    stats["num_orders_total"] = order_stats.shape[0]
     counts = order_stats["first_fill_time"].isna().value_counts()
     for nan_indicator in counts.index:
         num_orders = counts[nan_indicator]

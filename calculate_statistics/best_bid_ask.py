@@ -27,12 +27,10 @@ def calculate_best_bid_ask_statistics(
     )
     best_bid_ask.columns = [col.decode("utf-8") for col in best_bid_ask.columns]
     del best_bid_ask[" "]
-    # if we do not have updates on both book sides
+    # if we do not have updates on both book sides, return empty result
     if not best_bid_ask.shape[1] == 2:
-        return {
-            "time_weighted_quoted_spread": np.nan,
-            "time_weighted_relative_quoted_spread_bps": np.nan,
-        }
+        return empty_result()
+
     # get prices in chf
     best_bid_ask = best_bid_ask / price_decimals
     # remember cases when there are not orders on both sides of the order book
@@ -64,11 +62,11 @@ def calculate_best_bid_ask_statistics(
 
     total_time = best_bid_ask["time_validity"].sum()
     if total_time > 0:
-        time_weighted_quoted_spread = (
+        quoted_spread_time_weighted = (
             np.sum(best_bid_ask["quoted_spread"] * best_bid_ask["time_validity"])
             / total_time
         )
-        time_weighted_relative_quoted_spread_bps = (
+        quoted_rel_spread_bps_time_weighted = (
             np.sum(
                 best_bid_ask["relative_quoted_spread_bps"]
                 * best_bid_ask["time_validity"]
@@ -76,11 +74,15 @@ def calculate_best_bid_ask_statistics(
             / total_time
         )
         return {
-            "time_weighted_quoted_spread": time_weighted_quoted_spread,
-            "time_weighted_relative_quoted_spread_bps": time_weighted_relative_quoted_spread_bps,
+            "quoted_spread_time_weighted": quoted_spread_time_weighted,
+            "quoted_rel_spread_bps_time_weighted": quoted_rel_spread_bps_time_weighted,
         }
     else:
+        return empty_result()
+
+
+def empty_result():
         return {
-            "time_weighted_quoted_spread": np.nan,
-            "time_weighted_relative_quoted_spread_bps": np.nan,
+            "quoted_spread_time_weighted": np.nan,
+            "quoted_rel_spread_bps_time_weighted": np.nan,
         }

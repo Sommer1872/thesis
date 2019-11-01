@@ -1,8 +1,43 @@
 #!/usr/bin/env python3
 """
 """
+from pathlib import Path
 
 import pandas as pd
+
+
+def load_market_quality_statistics(
+    filepath: Path,
+) -> pd.DataFrame:
+    """
+    """
+    daily_stats = pd.read_csv(filepath)
+
+    daily_stats["date"] = pd.to_datetime(daily_stats["date"], format="%Y-%m-%d")
+    daily_stats.set_index("date", inplace=True)
+    daily_stats.sort_index(inplace=True)
+    # After non-equivalence dummy
+    daily_stats["after_nonequivalence"] = daily_stats.index >= pd.Timestamp(
+        "2019-07-01"
+    )
+    # filter to not include delisted stocks
+    last_date_avail = daily_stats.reset_index()[["date", "isin"]].groupby("isin").max()
+    last_date_avail = last_date_avail.groupby("isin").max()
+    last_date_avail = last_date_avail[
+        last_date_avail["date"] != daily_stats.index.max()
+    ]
+    delisted_isins = last_date_avail.index.to_list()
+    daily_stats = daily_stats[~daily_stats["isin"].isin(delisted_isins)]
+
+    # exclude aluflexpack (because they had IPO only on June 28th)
+    daily_stats.set_index("isin", append=True, inplace=True)
+    daily_stats = daily_stats.drop(index="CH0453226893", level="isin")
+
+    # exclude Alcon on 8th of April
+    daily_stats.drop(index=("2019-04-08", "CH0432492467"), inplace=True)
+    daily_stats.reset_index("isin", inplace=True)
+
+    return daily_stats
 
 
 def load_frag_data() -> pd.DataFrame:
@@ -15,7 +50,7 @@ def load_frag_data() -> pd.DataFrame:
     frag.reset_index("figi", inplace=True)
     frag.set_index(["share_class_id_bb_global"], append=True, inplace=True)
 
-    # calculate fragmentation index (Gresse, 2017, JFM, p. 6)
+    # calculate fragmentation index (similar to Gresse, 2017, JFM, p. 6)
     frag["market_volume"] = frag.groupby(["date", "share_class_id_bb_global"])[
         "volume"
     ].sum()
@@ -28,7 +63,6 @@ def load_frag_data() -> pd.DataFrame:
 
     frag.reset_index("share_class_id_bb_global", inplace=True)
     del frag["market_share_squared"]
-    frag.set_index("isin", append=True, inplace=True)
 
     # keep only six data
     frag = frag[frag["mic"].isin(["xvtx", "xswx"])]
@@ -38,7 +72,7 @@ def load_frag_data() -> pd.DataFrame:
 
 def load_bloomberg_data() -> pd.DataFrame:
     bloomi = pd.read_csv(
-        f"~/data/turnover_per_venue/20191018_turnover_Bloomberg.csv", sep=";"
+        f"~/data/turnover_per_venue/20191031_turnover_Bloomberg.csv", sep=";"
     )
     bloomi = (
         bloomi.iloc[2:].rename(columns={"Unnamed: 0": "date"}).set_index("date").stack()
@@ -70,7 +104,7 @@ def load_mapping() -> pd.DataFrame:
     # keep only CHF
     mapping["date"] = pd.to_datetime(mapping["date"], format="%Y-%m-%d")
     mapping = mapping[mapping["ccy"] == "CHF"]
-    mapping = mapping[["date", "bigi", "isin", "share_class_id_bb_global", "mic"]]
+    mapping = mapping[["date", "bigi", "isin", "share_class_id_bb_global", "mic", "bb_ticker"]]
     mapping.rename(columns={"bigi": "figi"}, inplace=True)
     mapping.drop_duplicates(inplace=True)
     mapping.set_index(["date", "figi"], inplace=True)
