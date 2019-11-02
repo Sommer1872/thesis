@@ -3,12 +3,11 @@
 """
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 
-def load_market_quality_statistics(
-    filepath: Path,
-) -> pd.DataFrame:
+def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     """
     """
     daily_stats = pd.read_csv(filepath)
@@ -20,6 +19,11 @@ def load_market_quality_statistics(
     daily_stats["after_nonequivalence"] = daily_stats.index >= pd.Timestamp(
         "2019-07-01"
     )
+    daily_stats["order_to_trade"] = (
+        daily_stats["total_num_orders"] / daily_stats["num_transactions"]
+    )
+    daily_stats["log_turnover"] = np.log(daily_stats["turnover"])
+
     # filter to not include delisted stocks
     last_date_avail = daily_stats.reset_index()[["date", "isin"]].groupby("isin").max()
     last_date_avail = last_date_avail.groupby("isin").max()
@@ -104,7 +108,9 @@ def load_mapping() -> pd.DataFrame:
     # keep only CHF
     mapping["date"] = pd.to_datetime(mapping["date"], format="%Y-%m-%d")
     mapping = mapping[mapping["ccy"] == "CHF"]
-    mapping = mapping[["date", "bigi", "isin", "share_class_id_bb_global", "mic", "bb_ticker"]]
+    mapping = mapping[
+        ["date", "bigi", "isin", "share_class_id_bb_global", "mic", "bb_ticker"]
+    ]
     mapping.rename(columns={"bigi": "figi"}, inplace=True)
     mapping.drop_duplicates(inplace=True)
     mapping.set_index(["date", "figi"], inplace=True)

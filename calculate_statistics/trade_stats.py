@@ -55,6 +55,7 @@ def calculate_effective_statistics(
     stats["turnover"] = aggregated["trade_value"].sum()
 
     if not agg_stats.empty:
+        stats["price_mean"] = agg_stats.loc["mean", "price"]
         stats["num_transactions"] = agg_stats.loc["count", "price"]
         stats["eff_spread_mean"] = agg_stats.loc["mean", "effective_spread"]
         stats["eff_spread_median"] = agg_stats.loc["50%", "effective_spread"]
