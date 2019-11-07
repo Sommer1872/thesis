@@ -35,9 +35,20 @@ def calculate_order_stats(
     if order_stats.empty:
         return empty_result()
 
+    # filter if filled/removed at the same microsecond as entered
+    same_microsecond = (order_stats.index == order_stats["first_fill_time"])
+    order_stats = order_stats.loc[~same_microsecond]
+    same_microsecond = (order_stats.index == order_stats["remove_time"])
+    order_stats = order_stats.loc[~same_microsecond]
+
     # time to fill in milliseconds
     order_stats["time_to_fill"] = (
         order_stats["first_fill_time"] - order_stats.index
+    ) / 1000
+
+    # time to removal in milliseconds
+    order_stats["time_to_removal"] = (
+        order_stats["remove_time"] - order_stats.index
     ) / 1000
 
     # distance to best price, also in number of ticks
@@ -77,10 +88,11 @@ def calculate_order_stats(
         "quantity_filled",
         "distance_in_ticks",
         "time_to_fill",
+        "time_to_removal",
     ]
     close_to_best = order_stats.loc[order_stats.distance_in_ticks <= 1, columns]
 
-    time_to_fill_stats = close_to_best["time_to_fill"].describe()
+    time_to_stats = close_to_best[["time_to_fill", "time_to_removal"]].describe()
 
     close_to_best["value_entered"] = (
         close_to_best["price"] * close_to_best["quantity_entered"]
@@ -92,8 +104,14 @@ def calculate_order_stats(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 
-        stats["time_to_fill_mean"] = time_to_fill_stats.get("mean", np.nan)
-        stats["time_to_fill_median"] = time_to_fill_stats.get("50%", np.nan)
+        stats["time_to_fill_mean"] = time_to_stats.loc["mean", "time_to_fill"]
+        stats["time_to_fill_median"] = time_to_stats.loc["50%", "time_to_fill"]
+        stats["time_to_removal_mean"] = time_to_stats.loc[
+            "mean", "time_to_removal"
+        ]
+        stats["time_to_removal_median"] = time_to_stats.loc[
+            "50%", "time_to_removal"
+        ]
 
         stats["value_entered_mean"] = np.mean(close_to_best["value_entered"])
         stats["value_entered_median"] = np.median(close_to_best["value_entered"])

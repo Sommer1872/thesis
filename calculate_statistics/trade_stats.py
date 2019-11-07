@@ -10,6 +10,7 @@ def calculate_effective_statistics(
     transactions: pd.DataFrame, metainfo: pd.Series, tick_sizes: pd.DataFrame
 ) -> Dict[str, float]:
 
+    # Breedon, Chen, Ranaldo & Vause, 2019, p. 17
     transactions["q_t"] = np.where(transactions["aggressor"] == "B", 1, -1)
     transactions["effective_spread"] = transactions["q_t"] * (
         transactions["price"] - transactions["mid"]

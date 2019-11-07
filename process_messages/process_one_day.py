@@ -111,7 +111,7 @@ class SingleDayIMIData(object):
                 # update the orderbook
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
                 this_orderbook[price] += quantity
-                # record if price was at best
+                # keep track of statistics
                 best_price, best_quantity = this_orderbook.peekitem(0)
                 this_order_statistics = {
                     "entry_time": timestamp,
@@ -123,6 +123,7 @@ class SingleDayIMIData(object):
                     "remove_time": None,
                 }
                 self.order_stats[orderbook_no][order_no] = this_order_statistics
+                # record if price was at best
                 if price == best_price:
                     self.best_depths[orderbook_no].append(
                         self.NewBestQuantity(
@@ -305,7 +306,7 @@ class SingleDayIMIData(object):
                 # update order stats
                 this_order_statistics = self.order_stats[orderbook_no][order_no]
                 this_order_statistics["quantity_filled"] += executed_quantity
-                if not this_order_statistics.get("first_fill_time"):
+                if this_order_statistics.get("first_fill_time") is None:
                     this_order_statistics["first_fill_time"] = timestamp
                 # order book
                 this_orderbook = self.orderbooks[orderbook_no]
@@ -373,7 +374,7 @@ class SingleDayIMIData(object):
                 # update order stats
                 this_order_statistics = self.order_stats[orderbook_no][order_no]
                 this_order_statistics["quantity_filled"] += executed_quantity
-                if not this_order_statistics.get("first_fill_time"):
+                if this_order_statistics.get("first_fill_time") is None:
                     this_order_statistics["first_fill_time"] = timestamp
                 # update the order book
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
