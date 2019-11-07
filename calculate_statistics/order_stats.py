@@ -92,8 +92,6 @@ def calculate_order_stats(
     ]
     close_to_best = order_stats.loc[order_stats.distance_in_ticks <= 1, columns]
 
-    time_to_stats = close_to_best[["time_to_fill", "time_to_removal"]].describe()
-
     close_to_best["value_entered"] = (
         close_to_best["price"] * close_to_best["quantity_entered"]
     )
@@ -104,21 +102,17 @@ def calculate_order_stats(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 
-        stats["time_to_fill_mean"] = time_to_stats.loc["mean", "time_to_fill"]
-        stats["time_to_fill_median"] = time_to_stats.loc["50%", "time_to_fill"]
-        stats["time_to_removal_mean"] = time_to_stats.loc[
-            "mean", "time_to_removal"
-        ]
-        stats["time_to_removal_median"] = time_to_stats.loc[
-            "50%", "time_to_removal"
-        ]
+        if not close_to_best["time_to_fill"].empty:
+            stats["time_to_fill_mean"] = np.mean(close_to_best["time_to_fill"])
+            stats["time_to_fill_median"] = np.median(close_to_best["time_to_fill"])
+        if not close_to_best["time_to_removal"].empty:
+            stats["time_to_removal_mean"] = np.mean(close_to_best["time_to_removal"])
+            stats["time_to_removal_median"] = np.median(close_to_best["time_to_removal"])
 
         stats["value_entered_mean"] = np.mean(close_to_best["value_entered"])
         stats["value_entered_median"] = np.median(close_to_best["value_entered"])
         stats["value_entered_total"] = np.sum(close_to_best["value_entered"])
 
-        stats["value_filled_mean"] = np.mean(close_to_best["value_filled"])
-        stats["value_filled_median"] = np.median(close_to_best["value_filled"])
         stats["value_filled_total"] = np.sum(close_to_best["value_filled"])
 
         stats["fill_ratio_mean"] = np.mean(
