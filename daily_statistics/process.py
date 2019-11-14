@@ -20,6 +20,7 @@ def process_daily_statistics(date_stats: Dict[str, Any]) -> pd.DataFrame:
             "best_bid_ask_stats",
             "best_depth_stats",
             "order_stats",
+            "message_counts",
             "realized_vola_stats",
             "transaction_stats",
         ]

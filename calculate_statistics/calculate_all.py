@@ -105,6 +105,12 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             end_microsecond,
         )
 
+        # message counts
+        message_counts = dict(this_day_imi_data.message_counts[orderbook_no])
+        message_counts["sum"] = sum(message_counts.values())
+        message_counts = {"message_counts_" + key: val for key, val in message_counts.items()}
+        this_orderbook_stats["message_counts"] = message_counts
+
         # preprocess transactions
         transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
         if transactions.empty:

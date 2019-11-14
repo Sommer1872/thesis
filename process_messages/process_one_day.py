@@ -3,7 +3,7 @@
 """
 
 # standard libraries
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, Counter
 from operator import neg, itemgetter
 from pathlib import Path
 import struct
@@ -41,6 +41,8 @@ class SingleDayIMIData(object):
         self.get_order_info = itemgetter(
             "orderbook_no", "book_side", "price", "quantity_outstanding"
         )
+
+        self.message_counts = dict()
 
         self.orders = defaultdict(dict)
         self.orderbooks = defaultdict(dict)
@@ -103,6 +105,7 @@ class SingleDayIMIData(object):
                 quantity = message[3]
                 orderbook_no = message[4]
                 price = message[5]
+                self.message_counts[orderbook_no]["add_order"] += 1
                 this_order = self.orders[order_no]
                 this_order["orderbook_no"] = orderbook_no
                 this_order["book_side"] = book_side
@@ -172,6 +175,7 @@ class SingleDayIMIData(object):
                 orderbook_no, book_side, price, quantity_outstanding = self.get_order_info(
                     this_order
                 )
+                self.message_counts[orderbook_no]["delete_order"] += 1
                 self.order_stats[orderbook_no][order_no]["remove_time"] = timestamp
                 # update the order book
                 this_orderbook = self.orderbooks[orderbook_no][book_side]
@@ -213,6 +217,7 @@ class SingleDayIMIData(object):
                 orderbook_no, book_side, old_order_price, old_quantity_outstanding = self.get_order_info(
                     old_order
                 )
+                self.message_counts[orderbook_no]["replace_order"] += 1
                 self.orders.pop(old_order_no)
                 self.order_stats[orderbook_no][old_order_no]["remove_time"] = timestamp
                 # new order
@@ -393,11 +398,15 @@ class SingleDayIMIData(object):
                 this_orderbook[b"S"] = OrderBookSide()
                 this_orderbook[b" "] = OrderBookSide()
 
+                # initialize message counts
+                self.message_counts[orderbook_no] = Counter()
+
                 group = message[5]
                 this_metadata = self.metadata[orderbook_no]
                 this_metadata["group"] = group
                 if group == b"ACoK    ":
                     self.blue_chip_orderbooks.append(orderbook_no)
+
                 this_metadata["price_type"] = message[2]
                 this_metadata["isin"] = message[3]
                 this_metadata["currency"] = message[4]
@@ -434,6 +443,7 @@ class SingleDayIMIData(object):
                 orderbook_no = message[1]
                 trading_state = message[2]
                 book_condition = message[3]
+                self.message_counts[orderbook_no]["orderbook_trading_action"] += 1
                 self.trading_actions[orderbook_no].append(
                     (timestamp, trading_state, book_condition)
                 )
