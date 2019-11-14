@@ -20,7 +20,7 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
         "2019-07-01"
     )
     daily_stats["order_to_trade"] = (
-        daily_stats["total_num_orders"] / daily_stats["num_transactions"]
+        daily_stats["num_orders_total"] / daily_stats["num_transactions"]
     )
     daily_stats["log_turnover"] = np.log(daily_stats["turnover"])
 

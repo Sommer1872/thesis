@@ -36,9 +36,9 @@ def calculate_order_stats(
         return empty_result()
 
     # filter if filled/removed at the same microsecond as entered
-    same_microsecond = (order_stats.index == order_stats["first_fill_time"])
+    same_microsecond = order_stats.index == order_stats["first_fill_time"]
     order_stats = order_stats.loc[~same_microsecond]
-    same_microsecond = (order_stats.index == order_stats["remove_time"])
+    same_microsecond = order_stats.index == order_stats["remove_time"]
     order_stats = order_stats.loc[~same_microsecond]
 
     # time to fill in milliseconds
@@ -101,26 +101,24 @@ def calculate_order_stats(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
+        
+        stats["time_to_fill_mean"] = close_to_best["time_to_fill"].mean()
+        stats["time_to_fill_median"] = close_to_best["time_to_fill"].median()
+        stats["time_to_removal_mean"] = close_to_best["time_to_removal"].mean()
+        stats["time_to_removal_median"] = close_to_best["time_to_removal"].median()
 
-        if not close_to_best["time_to_fill"].empty:
-            stats["time_to_fill_mean"] = np.mean(close_to_best["time_to_fill"])
-            stats["time_to_fill_median"] = np.median(close_to_best["time_to_fill"])
-        if not close_to_best["time_to_removal"].empty:
-            stats["time_to_removal_mean"] = np.mean(close_to_best["time_to_removal"])
-            stats["time_to_removal_median"] = np.median(close_to_best["time_to_removal"])
+        stats["value_entered_mean"] = close_to_best["value_entered"].mean()
+        stats["value_entered_median"] = close_to_best["value_entered"].median()
+        stats["value_entered_total"] = close_to_best["value_entered"].sum()
 
-        stats["value_entered_mean"] = np.mean(close_to_best["value_entered"])
-        stats["value_entered_median"] = np.median(close_to_best["value_entered"])
-        stats["value_entered_total"] = np.sum(close_to_best["value_entered"])
+        stats["value_filled_total"] = close_to_best["value_filled"].sum()
 
-        stats["value_filled_total"] = np.sum(close_to_best["value_filled"])
-
-        stats["fill_ratio_mean"] = np.mean(
+        stats["fill_ratio_mean"] = (
             close_to_best["value_filled"] / close_to_best["value_entered"]
-        )
-        stats["fill_ratio_median"] = np.median(
+        ).mean()
+        stats["fill_ratio_median"] = (
             close_to_best["value_filled"] / close_to_best["value_entered"]
-        )
+        ).median()
         if stats["value_entered_total"] > 0:
             stats["fill_ratio_total"] = (
                 stats["value_filled_total"] / stats["value_entered_total"]
