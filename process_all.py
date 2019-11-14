@@ -32,18 +32,13 @@ def main():
     print(f"\nProcessing {num_files} trading days...")
     daily_stats = load_and_process_all(binary_file_paths)
 
-    print(f"\nProcessing results...")
-    # Save to pickle just to be safe
-    stats_path = Path("daily_statistics/stats")
-    stats_path.mkdir(exist_ok=True)
-    timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
-    filepath = stats_path / f"{timestamp}_daily_stats.pickle"
-    with open(filepath, "wb") as output_file:
-        pickle.dump(daily_stats, output_file, protocol=pickle.HIGHEST_PROTOCOL)
-
     # further processing
+    print(f"\nProcessing results...")
     results = combine_daily_statistics(daily_stats)
 
+    # save results to csv
+    stats_path = Path("daily_statistics/stats")
+    stats_path.mkdir(exist_ok=True)
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
     filepath = stats_path / f"{timestamp}_daily_stats.csv"
     results.to_csv(filepath, float_format="%g")
