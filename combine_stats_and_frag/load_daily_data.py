@@ -23,6 +23,7 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
         daily_stats["num_orders_total"] / daily_stats["num_transactions"]
     )
     daily_stats["log_turnover"] = np.log(daily_stats["turnover"])
+    daily_stats["price_reciprocal"] = 1 / daily_stats["price_mean"]
 
     # filter to not include delisted stocks
     last_date_avail = daily_stats.reset_index()[["date", "isin"]].groupby("isin").max()

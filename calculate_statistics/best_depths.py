@@ -17,7 +17,7 @@ def calculate_best_depth_statistics(
         subset=["timestamp", "book_side"], inplace=True, keep="last"
     )
     best_depths = best_depths.pivot(
-        index="timestamp", columns="book_side", values="new_best_quantity"
+        index="timestamp", columns="book_side", values="new_depth_at_best"
     )
     best_depths.columns = [col.decode("utf-8") for col in best_depths.columns]
     del best_depths[" "]

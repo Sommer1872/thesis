@@ -77,8 +77,8 @@ class SingleDayIMIData(object):
         self.NewBestPrice = namedtuple(
             "NewBestPrice", ["timestamp", "book_side", "new_best_price"]
         )
-        self.NewBestQuantity = namedtuple(
-            "NewBestQuantity", ["timestamp", "book_side", "new_best_quantity"]
+        self.NewBestDepth = namedtuple(
+            "NewBestDepth", ["timestamp", "book_side", "new_depth_at_best"]
         )
 
     def process_messages(self):
@@ -129,10 +129,10 @@ class SingleDayIMIData(object):
                 # record if price was at best
                 if price == best_price:
                     self.best_depths[orderbook_no].append(
-                        self.NewBestQuantity(
+                        self.NewBestDepth(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity,
+                            new_depth_at_best=best_quantity*best_price,
                         )
                     )
                     # if it's price setting
@@ -196,10 +196,10 @@ class SingleDayIMIData(object):
                         )
                     # in any case, if the price was at best, we note the new best quantity
                     self.best_depths[orderbook_no].append(
-                        self.NewBestQuantity(
+                        self.NewBestDepth(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity,
+                            new_depth_at_best=best_quantity*best_price,
                         )
                     )
                 # if price was not at best, but there's no quantity outstanding
@@ -251,10 +251,10 @@ class SingleDayIMIData(object):
                         )
                     # in any case, if the price was at best, we note the new best quantity
                     self.best_depths[orderbook_no].append(
-                        self.NewBestQuantity(
+                        self.NewBestDepth(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity,
+                            new_depth_at_best=best_quantity*best_price,
                         )
                     )
                 # if price was not at best, but there's no quantity outstanding
@@ -277,10 +277,10 @@ class SingleDayIMIData(object):
                 # record if price was at best
                 if price == best_price:
                     self.best_depths[orderbook_no].append(
-                        self.NewBestQuantity(
+                        self.NewBestDepth(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity,
+                            new_depth_at_best=best_quantity*best_price,
                         )
                     )
                     # if it's the only one at the best price
@@ -349,10 +349,10 @@ class SingleDayIMIData(object):
                         )
                     # in any case, if the price was at best, we note the new best quantity
                     self.best_depths[orderbook_no].append(
-                        self.NewBestQuantity(
+                        self.NewBestDepth(
                             timestamp=timestamp,
                             book_side=book_side,
-                            new_best_quantity=best_quantity,
+                            new_depth_at_best=best_quantity*best_price,
                         )
                     )
                 # if price was not at best, but there's no quantity outstanding

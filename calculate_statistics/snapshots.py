@@ -24,7 +24,8 @@ def calculate_snapshot_statistics(
         snapshots[["best_ask", "best_bid"]] / price_decimals
     )
     snapshots["depth_at_best"] = (
-        snapshots["best_bid_quantity"] + snapshots["best_ask_quantity"]
+        snapshots["best_bid_quantity"] * snapshots["best_bid"]
+        + snapshots["best_ask_quantity"] * snapshots["best_ask"]
     )
 
     # filter based on trading_actions

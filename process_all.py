@@ -73,7 +73,7 @@ def combine_daily_statistics(daily_stats: List[Dict]):
             all_results.append(daily_result)
 
     # combine everything into one big dataframe
-    results = pd.concat(all_results)
+    results = pd.concat(all_results, sort=False)
     del all_results
     results.reset_index(inplace=True)
     results.set_index("isin", inplace=True)
