@@ -42,20 +42,18 @@ class SingleDayIMIData(object):
             "orderbook_no", "book_side", "price", "quantity_outstanding"
         )
 
-        self.message_counts = dict()
-
-        self.orders = defaultdict(dict)
-        self.orderbooks = defaultdict(dict)
+        self.metadata = dict()
+        self.orders = dict()
+        self.orderbooks = dict()
         self.price_tick_sizes = defaultdict(dict)
-        self.metadata = defaultdict(dict)
-        self.snapshots = defaultdict(dict)
-        self.order_stats = defaultdict(dict)
+        self.trading_actions = dict()
 
-        self.transactions = defaultdict(list)
-        self.best_bid_ask = defaultdict(list)
-        self.best_depths = defaultdict(list)
-        self.trading_actions = defaultdict(list)
-        self.blue_chip_orderbooks = list()
+        self.best_bid_ask = dict()
+        self.best_depths = dict()
+        self.transactions = dict()
+        self.order_stats = dict()
+        self.message_counts = dict()
+        self.snapshots = dict()
 
         self.Transaction = namedtuple(
             "Transaction",
@@ -106,7 +104,8 @@ class SingleDayIMIData(object):
                 orderbook_no = message[4]
                 price = message[5]
                 self.message_counts[orderbook_no]["add_order"] += 1
-                this_order = self.orders[order_no]
+                this_order = dict() 
+                self.orders[order_no] = this_order
                 this_order["orderbook_no"] = orderbook_no
                 this_order["book_side"] = book_side
                 this_order["quantity_outstanding"] = quantity
@@ -225,7 +224,8 @@ class SingleDayIMIData(object):
                 quantity = message[3]
                 price = message[4]
                 # create new order entry
-                new_order = self.orders[new_order_no]
+                new_order = dict() 
+                self.orders[new_order_no] = new_order
                 new_order["book_side"] = book_side
                 new_order["quantity_outstanding"] = quantity
                 new_order["orderbook_no"] = orderbook_no
@@ -390,10 +390,11 @@ class SingleDayIMIData(object):
             # Orderbook Directory message
             elif message_type == b"R":
                 message = self.unpack(">iis12s3s8siiiiii", message)
+                orderbook_no = message[1]
 
                 # initialize each side of the orderbook
-                orderbook_no = message[1]
-                this_orderbook = self.orderbooks[orderbook_no]
+                this_orderbook = dict()
+                self.orderbooks[orderbook_no] = this_orderbook
                 this_orderbook[b"B"] = OrderBookSide(neg)
                 this_orderbook[b"S"] = OrderBookSide()
                 this_orderbook[b" "] = OrderBookSide()
@@ -401,21 +402,28 @@ class SingleDayIMIData(object):
                 # initialize message counts
                 self.message_counts[orderbook_no] = Counter()
 
-                group = message[5]
-                this_metadata = self.metadata[orderbook_no]
-                this_metadata["group"] = group
-                if group == b"ACoK    ":
-                    self.blue_chip_orderbooks.append(orderbook_no)
+                price_tick_table_id = message[8]
 
+                # initialize metadata
+                this_metadata = dict()
+                self.metadata[orderbook_no] = this_metadata 
                 this_metadata["price_type"] = message[2]
                 this_metadata["isin"] = message[3]
                 this_metadata["currency"] = message[4]
+                this_metadata["group"] = message[5]
                 this_metadata["minimum_quantity"] = message[6]
                 this_metadata["quantity_tick_table_id"] = message[7]
-                this_metadata["price_tick_table_id"] = message[8]
+                this_metadata["price_tick_table_id"] = price_tick_table_id
                 this_metadata["price_decimals"] = message[9]
                 this_metadata["delisting_date"] = message[10]
                 this_metadata["delisting_time"] = message[11]
+
+                self.best_bid_ask[orderbook_no] = list()
+                self.best_depths[orderbook_no] = list()
+                self.transactions[orderbook_no] = list()
+                self.order_stats[orderbook_no] = dict()
+                self.snapshots[orderbook_no] = dict()
+                self.trading_actions[orderbook_no] = list()
 
             # Price Tick Size message
             elif message_type == b"L":
@@ -423,9 +431,9 @@ class SingleDayIMIData(object):
                 # timestamp = self.microseconds + message[0] * 1e-3
                 price_tick_table_id = message[1]
                 this_tick_size_table = self.price_tick_sizes[price_tick_table_id]
-                # price_tick_size = message[2]
-                # price_start = message[3]
-                this_tick_size_table[message[2]] = message[3]
+                price_tick_size = message[2]
+                price_start = message[3]
+                this_tick_size_table[price_tick_size] = price_start
 
             # Quantity Tick Size message
             elif message_type == b"M":

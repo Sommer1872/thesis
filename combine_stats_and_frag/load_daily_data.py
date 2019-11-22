@@ -22,8 +22,21 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     daily_stats["order_to_trade"] = (
         daily_stats["num_orders_total"] / daily_stats["num_transactions"]
     )
+    daily_stats["num_orders_filled_percent"] = (
+        daily_stats["num_orders_filled"] / daily_stats["num_orders_total"]
+    )
+    daily_stats["num_orders_deleted_percent"] = (
+        daily_stats["num_orders_deleted"] / daily_stats["num_orders_total"]
+    )
+    daily_stats["message_counts_add_to_delete"] = (
+        daily_stats["message_counts_add_order"]
+        / daily_stats["message_counts_delete_order"]
+    )
     daily_stats["log_turnover"] = np.log(daily_stats["turnover"])
     daily_stats["price_reciprocal"] = 1 / daily_stats["price_mean"]
+    daily_stats["AT_proxy"] = (
+        daily_stats["turnover"] / (daily_stats["message_counts_sum"]) * -1
+    )  # Hendershott et al. 2017 JF p. 7
 
     # filter to not include delisted stocks
     last_date_avail = daily_stats.reset_index()[["date", "isin"]].groupby("isin").max()

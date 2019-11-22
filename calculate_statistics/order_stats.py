@@ -55,6 +55,7 @@ def calculate_order_stats(
     order_stats["distance_to_best"] = abs(
         order_stats["price"] - order_stats["best_price"]
     )
+    # unequal join
     conditions = [
         (order_stats.price.values >= step.price_start)
         & (order_stats.price.values < step.price_end)

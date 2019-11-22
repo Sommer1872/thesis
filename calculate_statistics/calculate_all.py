@@ -7,12 +7,12 @@ from typing import Any, Dict, Union
 import pandas as pd
 import numpy as np
 
-from calculate_statistics.best_bid_ask import calculate_best_bid_ask_statistics
-from calculate_statistics.best_depths import calculate_best_depth_statistics
-from calculate_statistics.order_stats import calculate_order_stats
-from calculate_statistics.snapshots import calculate_snapshot_statistics
-from calculate_statistics.trade_stats import calculate_effective_statistics
-from calculate_statistics.realized_vola import calculate_realized_vola_stats
+from .best_bid_ask import calculate_best_bid_ask_statistics
+from .best_depths import calculate_best_depth_statistics
+from .order_stats import calculate_order_stats
+from .snapshots import calculate_snapshot_statistics
+from .trade_stats import calculate_effective_statistics
+from .realized_vola import calculate_realized_vola_stats
 
 
 def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
