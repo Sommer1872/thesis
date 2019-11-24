@@ -66,32 +66,6 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             trading_actions.dropna(subset=["until"], inplace=True)
             trading_actions["until"] = trading_actions["until"].astype(int)
 
-        # best bid and ask
-        best_bid_ask = pd.DataFrame(this_day_imi_data.best_bid_ask[orderbook_no])
-        best_bid_ask_stats = calculate_best_bid_ask_statistics(
-            best_bid_ask, trading_actions, metainfo, start_microsecond, end_microsecond
-        )
-        this_orderbook_stats["best_bid_ask_stats"] = best_bid_ask_stats
-
-        # depth at best
-        best_depths = pd.DataFrame(this_day_imi_data.best_depths[orderbook_no])
-        best_depth_stats = calculate_best_depth_statistics(
-            best_depths, trading_actions, start_microsecond, end_microsecond
-        )
-        this_orderbook_stats["best_depth_stats"] = best_depth_stats
-
-        # snapshots
-        snapshots = pd.DataFrame.from_dict(
-            this_day_imi_data.snapshots[orderbook_no], orient="index"
-        )
-        snapshots = snapshots.loc[
-            int(start_microsecond * 1e-6) : int(end_microsecond * 1e-6)
-        ]
-        snapshot_stats = calculate_snapshot_statistics(
-            snapshots, trading_actions, metainfo
-        )
-        this_orderbook_stats["snapshot_stats"] = snapshot_stats
-
         # order_stats
         order_stats = pd.DataFrame.from_dict(
             this_day_imi_data.order_stats[orderbook_no], orient="index"
@@ -103,36 +77,6 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             tick_sizes,
             start_microsecond,
             end_microsecond,
-        )
-
-        # message counts
-        message_counts = dict(this_day_imi_data.message_counts[orderbook_no])
-        message_counts["sum"] = sum(message_counts.values())
-        message_counts = {"message_counts_" + key: val for key, val in message_counts.items()}
-        this_orderbook_stats["message_counts"] = message_counts
-
-        # preprocess transactions
-        transactions = pd.DataFrame(this_day_imi_data.transactions[orderbook_no])
-        if transactions.empty:
-            continue
-        transactions.set_index("timestamp", inplace=True)
-        transactions = transactions.loc[start_microsecond:end_microsecond]
-        if transactions.empty:
-            continue
-        transactions["mid"] = (
-            transactions["best_ask"] + transactions["best_bid"]
-        ) * 0.5
-        transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
-
-        # trade statistics
-        aggregated_statistics = calculate_effective_statistics(
-            transactions, metainfo, tick_sizes
-        )
-        this_orderbook_stats["transaction_stats"] = aggregated_statistics
-
-        # realized volatility
-        this_orderbook_stats["realized_vola_stats"] = calculate_realized_vola_stats(
-            transactions
         )
 
     single_day_stats = {
