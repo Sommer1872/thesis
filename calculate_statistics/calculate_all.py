@@ -135,10 +135,10 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             transactions
         )
 
-    results = {
+    single_day_stats = {
         "date": this_day_imi_data.date,
         "all_statistics": all_statistics,
         "metadata": metadata,
     }
 
-    return results
+    return single_day_stats

@@ -15,17 +15,7 @@ def process_daily_statistics(date_stats: Dict[str, Any]) -> pd.DataFrame:
     all_statistics = date_stats["all_statistics"]
 
     for orderbook_no, this_orderbook_stats in all_statistics.items():
-        measure_types = [
-            "snapshot_stats",
-            "best_bid_ask_stats",
-            "best_depth_stats",
-            "order_stats",
-            "message_counts",
-            "realized_vola_stats",
-            "transaction_stats",
-        ]
-        for measure_type in measure_types:
-            measure_stats = this_orderbook_stats.get(measure_type, dict())
+        for measure_type, measure_stats in this_orderbook_stats.items():
             if measure_stats:
                 for measure, value in measure_stats.items():
                     metadata.loc[orderbook_no, measure] = value

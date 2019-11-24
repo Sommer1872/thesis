@@ -51,7 +51,7 @@ def load_and_process_all(file_paths: Iterator[Path]) -> List[Dict]:
     with Pool(processes=os.cpu_count() - 1) as pool:
         daily_stats = list()
         parallel_processes = pool.imap_unordered(
-            load_and_process_orderbook_stats, file_paths
+            load_and_process_orderbook_stats, file_paths,
         )
         for single_day_statistics_output in tqdm(parallel_processes):
             daily_stats.append(single_day_statistics_output)
