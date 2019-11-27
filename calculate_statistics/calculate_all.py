@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
 """
-
-from typing import Any, Dict, Union
-
 import pandas as pd
 import numpy as np
 
@@ -15,7 +12,7 @@ from .trade_stats import calculate_effective_statistics
 from .realized_vola import calculate_realized_vola_stats
 
 
-def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
+def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
 
     start_microsecond = int(9.25 * 3600e6)
     end_microsecond = int(17.25 * 3600e6)
@@ -34,13 +31,10 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
     # keep only CHF denoted
     metadata = metadata[metadata["currency"] == "CHF"]
 
-    all_statistics: Dict[int, Dict[str, Any]] = dict()
-
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:
 
-        all_statistics[orderbook_no] = dict()
-        this_orderbook_stats = all_statistics[orderbook_no]
+        this_orderbook_stats = dict()
 
         metainfo = metadata.loc[orderbook_no]
         price_decimals = 10 ** metainfo.price_decimals
@@ -135,10 +129,10 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             transactions
         )
 
-    single_day_stats = {
-        "date": this_day_imi_data.date,
-        "all_statistics": all_statistics,
-        "metadata": metadata,
-    }
+        for measure_type, measure_stats in this_orderbook_stats.items():
+            for measure, value in measure_stats.items():
+                metadata.loc[orderbook_no, measure] = value
 
-    return single_day_stats
+    metadata["date"] = pd.Timestamp(this_day_imi_data.date)
+
+    return metadata
