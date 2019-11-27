@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """
 """
-
-from typing import Any, Dict, Union
+import pickle
+from typing import Dict, Union
 
 import pandas as pd
 import numpy as np
 
-from .best_bid_ask import calculate_best_bid_ask_statistics
-from .best_depths import calculate_best_depth_statistics
 from .order_stats import calculate_order_stats
-from .snapshots import calculate_snapshot_statistics
-from .trade_stats import calculate_effective_statistics
-from .realized_vola import calculate_realized_vola_stats
 
 
 def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
@@ -34,16 +29,12 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
     # keep only CHF denoted
     metadata = metadata[metadata["currency"] == "CHF"]
 
-    all_statistics: Dict[int, Dict[str, Any]] = dict()
+    all_statistics = list()
 
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:
 
-        all_statistics[orderbook_no] = dict()
-        this_orderbook_stats = all_statistics[orderbook_no]
-
         metainfo = metadata.loc[orderbook_no]
-        price_decimals = 10 ** metainfo.price_decimals
 
         # tick sizes
         tick_table_id = int(metainfo.price_tick_table_id)
@@ -70,7 +61,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
         order_stats = pd.DataFrame.from_dict(
             this_day_imi_data.order_stats[orderbook_no], orient="index"
         )
-        this_orderbook_stats["order_stats"] = calculate_order_stats(
+        close_to_best = calculate_order_stats(
             order_stats,
             trading_actions,
             metainfo,
@@ -79,9 +70,16 @@ def calculate_orderbook_stats(this_day_imi_data) -> Dict[str, Union[str, Dict]]:
             end_microsecond,
         )
 
+        close_to_best["orderbook_no"] = orderbook_no
+        close_to_best.set_index("orderbook_no", inplace=True)
+        all_statistics.append(close_to_best)
+
+    survival_times = pd.concat(all_statistics, sort=False)
+    survival_times.to_pickle("1238738.zip", protocol=pickle.HIGHEST_PROTOCOL)
+
     single_day_stats = {
         "date": this_day_imi_data.date,
-        "all_statistics": all_statistics,
+        "survival_times": survival_times,
         "metadata": metadata,
     }
 

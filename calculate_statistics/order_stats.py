@@ -17,11 +17,11 @@ def calculate_order_stats(
     end_microsecond: int,
 ) -> Dict[str, float]:
 
-    if order_stats.empty:
-        return empty_result()
+    #     if order_stats.empty:
+    #         return empty_result()
     order_stats.set_index("entry_time", inplace=True)
     order_stats.sort_index(inplace=True)
-    
+
     # filter for start/end
     order_stats = order_stats.loc[start_microsecond:end_microsecond]
     # remove market orders
@@ -34,24 +34,14 @@ def calculate_order_stats(
                 (order_stats.index < event.timestamp)
                 | (order_stats.index > event.until)
             ]
-    if order_stats.empty:
-        return empty_result()
+    #     if order_stats.empty:
+    #         return empty_result()
 
     # filter if filled/removed at the same microsecond as entered
     same_microsecond = order_stats.index == order_stats["first_fill_time"]
     order_stats = order_stats.loc[~same_microsecond]
     same_microsecond = order_stats.index == order_stats["remove_time"]
     order_stats = order_stats.loc[~same_microsecond]
-
-    # time to fill in milliseconds
-    order_stats["time_to_fill"] = (
-        order_stats["first_fill_time"] - order_stats.index
-    ) / 1000
-
-    # time to removal in milliseconds
-    order_stats["time_to_removal"] = (
-        order_stats["remove_time"] - order_stats.index
-    ) / 1000
 
     # distance to best price, also in number of ticks
     order_stats["distance_to_best"] = abs(
@@ -81,20 +71,25 @@ def calculate_order_stats(
         "quantity_entered",
         "quantity_filled",
         "distance_in_ticks",
-        "time_to_fill",
-        "time_to_removal",
+        "first_fill_time",
+        "remove_time",
     ]
-    close_to_best = order_stats.loc[order_stats.distance_in_ticks <= 1, columns]
+    condition = order_stats.distance_in_ticks <= 1
+    close_to_best = order_stats.loc[condition, columns]
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        
-        stats["time_to_fill_mean"] = close_to_best["time_to_fill"].mean()
-        stats["time_to_fill_median"] = close_to_best["time_to_fill"].median()
-        stats["time_to_removal_mean"] = close_to_best["time_to_removal"].mean()
-        stats["time_to_removal_median"] = close_to_best["time_to_removal"].median()
+    # time to fill in milliseconds
+    close_to_best["time_to_fill"] = (
+        close_to_best["first_fill_time"] - close_to_best.index
+    ) / 1000
 
-    return stats
+    # time to removal in milliseconds
+    close_to_best["time_to_removal"] = (
+        close_to_best["remove_time"] - close_to_best.index
+    ) / 1000
+
+    close_to_best = close_to_best[["time_to_fill", "time_to_removal"]]
+
+    return close_to_best
 
 
 def empty_result():
