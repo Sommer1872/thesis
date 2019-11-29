@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
 """
-
 # standard libraries
 from multiprocessing import Pool
 import os
 from pathlib import Path
-from typing import List, Iterator, Dict
+from typing import Any, Callable, List, Iterator, Dict
 
 # third-party packages
 import pandas as pd
@@ -29,35 +28,38 @@ def main():
     print(f"\nProcessing {num_files} trading days...")
 
     binary_file_paths = data_path.glob(pattern)
-    results = load_and_process_all(binary_file_paths)
+    orders = process_parallel(binary_file_paths, load_and_process_orderbook_stats)
+
+
+    results = process_parallel(orders.groupby("isin"), )
+
 
     # save to csv
-    stats_path = Path("statistics/daily_liquidity")
+    stats_path = Path("statistics/order_times")
     stats_path.mkdir(exist_ok=True)
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
-    filepath = stats_path / f"{timestamp}_liquidity_stats.csv"
-    results.to_csv(filepath, float_format="%g")
+    filepath = stats_path / f"{timestamp}_survival_times.zip"
+    results.to_pickle(filepath)
     print(f"Saved statistics to {filepath}")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 
 
-def load_and_process_all(file_paths: Iterator[Path]) -> List[Dict]:
+def process_parallel(inputs: Iterator[Any], function: Callable) -> pd.DataFrame:
+    """Applies the function to all inputs, in parallel
+    """
     with Pool(processes=os.cpu_count() - 1) as pool:
         daily_stats = list()
         parallel_processes = pool.imap_unordered(
-            load_and_process_orderbook_stats, file_paths,
+            function, inputs,
         )
-        for single_day_statistics_output in tqdm(parallel_processes):
-            daily_stats.append(single_day_statistics_output)
+        for output in tqdm(parallel_processes):
+            daily_stats.append(output)
 
     # combine all days into one big dataframe
     # each row corresponds to a stock/day combination
     results = pd.concat(daily_stats, sort=False)
     del daily_stats
-    results.reset_index(inplace=True)
-    results.set_index("isin", inplace=True)
-    results.rename(columns={"index": "orderbook_no"}, inplace=True)
     return results
 
 

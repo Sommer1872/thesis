@@ -63,8 +63,6 @@ def calculate_order_stats(
         10 ** metainfo.price_decimals
     )
 
-    stats = dict()
-
     # only look at orders that have been entered at most 1 tick away from best
     columns = [
         "price",
