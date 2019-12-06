@@ -38,7 +38,7 @@ def main():
     stats_path.mkdir(exist_ok=True)
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
     filepath = stats_path / f"{timestamp}_survival_times.zip"
-    results.to_csv(filepath, float_format="%g")
+    results.to_csv(filepath, float_format="%g", compression="zip")
     print(f"Saved statistics to {filepath}")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")

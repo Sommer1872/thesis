@@ -13,8 +13,8 @@ from tqdm import tqdm
 
 def main():
 
-    start_date = pd.Timestamp(2019, 9, 14)
-    end_date = pd.Timestamp(2019, 9, 21)
+    start_date = pd.Timestamp(2019, 11, 1)
+    end_date = pd.Timestamp(2019, 11, 30)
     username = "simon.sommer@student.unisg.ch"
 
     # retrieve and download all IMI files between start_date and end_date
