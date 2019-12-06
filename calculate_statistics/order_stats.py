@@ -2,7 +2,6 @@
 """
 """
 from typing import Dict
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -37,11 +36,11 @@ def calculate_order_stats(
     #     if order_stats.empty:
     #         return empty_result()
 
-    # filter if filled/removed at the same microsecond as entered
-    same_microsecond = order_stats.index == order_stats["first_fill_time"]
-    order_stats = order_stats.loc[~same_microsecond]
-    same_microsecond = order_stats.index == order_stats["remove_time"]
-    order_stats = order_stats.loc[~same_microsecond]
+    # # filter if filled/removed at the same microsecond as entered
+    # same_microsecond = order_stats.index == order_stats["first_fill_time"]
+    # order_stats = order_stats.loc[~same_microsecond]
+    # same_microsecond = order_stats.index == order_stats["remove_time"]
+    # order_stats = order_stats.loc[~same_microsecond]
 
     # distance to best price, also in number of ticks
     order_stats["distance_to_best"] = abs(
@@ -65,29 +64,27 @@ def calculate_order_stats(
 
     # only look at orders that have been entered at most 1 tick away from best
     columns = [
-        "price",
-        "quantity_entered",
-        "quantity_filled",
         "distance_in_ticks",
         "first_fill_time",
         "remove_time",
     ]
-    condition = order_stats.distance_in_ticks <= 1
-    close_to_best = order_stats.loc[condition, columns]
+    # condition = order_stats.distance_in_ticks <= 1
+    # close_to_best = order_stats.loc[condition, columns]
+    order_stats = order_stats[columns]
 
     # time to fill in milliseconds
-    close_to_best["time_to_fill"] = (
-        close_to_best["first_fill_time"] - close_to_best.index
+    order_stats["time_to_fill"] = (
+        order_stats["first_fill_time"] - order_stats.index
     ) / 1000
 
     # time to removal in milliseconds
-    close_to_best["time_to_removal"] = (
-        close_to_best["remove_time"] - close_to_best.index
+    order_stats["time_to_removal"] = (
+        order_stats["remove_time"] - order_stats.index
     ) / 1000
 
-    close_to_best = close_to_best[["time_to_fill", "time_to_removal"]]
+    order_stats = order_stats[["time_to_fill", "time_to_removal", "distance_in_ticks"]]
 
-    return close_to_best
+    return order_stats
 
 
 def empty_result():

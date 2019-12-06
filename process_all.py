@@ -5,7 +5,7 @@
 from multiprocessing import Pool
 import os
 from pathlib import Path
-from typing import Any, Callable, List, Iterator, Dict
+from typing import Any, Callable, Iterator
 
 # third-party packages
 import pandas as pd
@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from calculate_statistics.calculate_all import calculate_orderbook_stats
 from process_messages.process_one_day import SingleDayIMIData
+from survival.compute import compute_survival
 
 
 def main():
@@ -29,17 +30,15 @@ def main():
 
     binary_file_paths = data_path.glob(pattern)
     orders = process_parallel(binary_file_paths, load_and_process_orderbook_stats)
-
-
-    results = process_parallel(orders.groupby("isin"), )
-
+    print("Estimating survivals...")
+    results = process_parallel(orders.groupby("isin"), compute_survival)
 
     # save to csv
     stats_path = Path("statistics/order_times")
     stats_path.mkdir(exist_ok=True)
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
     filepath = stats_path / f"{timestamp}_survival_times.zip"
-    results.to_pickle(filepath)
+    results.to_csv(filepath, float_format="%g")
     print(f"Saved statistics to {filepath}")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
@@ -49,17 +48,11 @@ def process_parallel(inputs: Iterator[Any], function: Callable) -> pd.DataFrame:
     """Applies the function to all inputs, in parallel
     """
     with Pool(processes=os.cpu_count() - 1) as pool:
-        daily_stats = list()
-        parallel_processes = pool.imap_unordered(
-            function, inputs,
-        )
+        results = list()
+        parallel_processes = pool.imap_unordered(function, inputs,)
         for output in tqdm(parallel_processes):
-            daily_stats.append(output)
-
-    # combine all days into one big dataframe
-    # each row corresponds to a stock/day combination
-    results = pd.concat(daily_stats, sort=False)
-    del daily_stats
+            results.append(output)
+    results = pd.concat(results, sort=False)
     return results
 
 
