@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 """
+import pickle
+from typing import Dict, Union
+
 import pandas as pd
 import numpy as np
 
@@ -27,6 +30,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
     metadata = metadata[metadata["currency"] == "CHF"]
 
     all_statistics = list()
+
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:
 
