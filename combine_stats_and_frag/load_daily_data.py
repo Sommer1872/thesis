@@ -90,7 +90,7 @@ def load_frag_data() -> pd.DataFrame:
 
 def load_bloomberg_data() -> pd.DataFrame:
     bloomi = pd.read_csv(
-        f"~/data/turnover_per_venue/20191031_turnover_Bloomberg.csv", sep=";"
+        f"~/data/turnover_per_venue/20191130_turnover_Bloomberg.csv", sep=";"
     )
     bloomi = (
         bloomi.iloc[2:].rename(columns={"Unnamed: 0": "date"}).set_index("date").stack()
@@ -101,7 +101,7 @@ def load_bloomberg_data() -> pd.DataFrame:
         .rename(columns={"level_1": "figi", 0: "volume"})
     )
     bloomi["figi"] = bloomi["figi"].str.split(expand=True)[0]
-    bloomi["date"] = pd.to_datetime(bloomi["date"], format="%d.%m.%Y")
+    bloomi["date"] = pd.to_datetime(bloomi["date"], format="%d.%m.%y")
     bloomi.drop_duplicates(inplace=True)
     bloomi.set_index(["date", "figi"], inplace=True)
     bloomi["volume"] = bloomi["volume"].astype(float)

@@ -72,8 +72,11 @@ def compute_survival(group: Tuple[str, pd.DataFrame]) -> pd.DataFrame:
         this_stats["median_survival_before"] = median_before
         this_stats["median_survival_after"] = models["after"].median_survival_time_
 
-        test = logrank_test(durations_before, durations_after)
-        this_stats["logrank_test_pval"] = test.summary.p[0]
+        try:
+            test = logrank_test(durations_before, durations_after)
+            this_stats["logrank_test_pval"] = test.summary.p[0]
+        except AssertionError:
+            this_stats["logrank_test_pval"] = np.nan
 
         test = survival_difference_at_fixed_point_in_time_test(
             median_before, durations_before, durations_after
