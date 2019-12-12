@@ -55,7 +55,6 @@ class SingleDayIMIData(object):
         self.message_counts = dict()
         self.snapshots = dict()
 
-
     def process_messages(self):
         """Convert and process all messages inside a loop"""
 
@@ -81,7 +80,7 @@ class SingleDayIMIData(object):
                 orderbook_no = message[4]
                 price = message[5]
                 self.message_counts[orderbook_no]["add_order"] += 1
-                this_order = dict() 
+                this_order = dict()
                 self.orders[order_no] = this_order
                 this_order["orderbook_no"] = orderbook_no
                 this_order["book_side"] = book_side
@@ -153,7 +152,7 @@ class SingleDayIMIData(object):
                 quantity = message[3]
                 price = message[4]
                 # create new order entry
-                new_order = dict() 
+                new_order = dict()
                 self.orders[new_order_no] = new_order
                 new_order["book_side"] = book_side
                 new_order["quantity_outstanding"] = quantity
@@ -270,7 +269,7 @@ class SingleDayIMIData(object):
 
                 # initialize metadata
                 this_metadata = dict()
-                self.metadata[orderbook_no] = this_metadata 
+                self.metadata[orderbook_no] = this_metadata
                 this_metadata["price_type"] = message[2]
                 this_metadata["isin"] = message[3]
                 this_metadata["currency"] = message[4]

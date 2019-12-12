@@ -36,11 +36,11 @@ def calculate_order_stats(
     #     if order_stats.empty:
     #         return empty_result()
 
-    # # filter if filled/removed at the same microsecond as entered
-    # same_microsecond = order_stats.index == order_stats["first_fill_time"]
-    # order_stats = order_stats.loc[~same_microsecond]
-    # same_microsecond = order_stats.index == order_stats["remove_time"]
-    # order_stats = order_stats.loc[~same_microsecond]
+    # filter if filled/removed at the same microsecond as entered
+    same_microsecond = order_stats.index == order_stats["first_fill_time"]
+    order_stats = order_stats.loc[~same_microsecond]
+    same_microsecond = order_stats.index == order_stats["remove_time"]
+    order_stats = order_stats.loc[~same_microsecond]
 
     # distance to best price, also in number of ticks
     order_stats["distance_to_best"] = abs(

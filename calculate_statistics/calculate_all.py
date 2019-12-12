@@ -75,11 +75,14 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
 
     survival_times = pd.concat(all_statistics, sort=False)
 
-    # add date as a column
-    survival_times["date"] = pd.Timestamp(this_day_imi_data.date)
-
     # isin instead of orderbook_no's
     survival_times = survival_times.join(metadata["isin"])
-    survival_times.set_index("isin", inplace=True)
+
+    # add date/month as a column
+    this_date = pd.Timestamp(this_day_imi_data.date)
+    survival_times["date"] = this_date
+    survival_times["month"] = this_date.month
+
+    survival_times.set_index("month", inplace=True)
 
     return survival_times

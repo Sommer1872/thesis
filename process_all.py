@@ -30,16 +30,19 @@ def main():
 
     binary_file_paths = data_path.glob(pattern)
     orders = process_parallel(binary_file_paths, load_and_process_orderbook_stats)
-    print("Estimating survivals...")
-    results = process_parallel(orders.groupby("isin"), compute_survival)
+    orders = pd.concat(orders, sort=False)
 
-    # save to csv
-    stats_path = Path("statistics/order_times")
-    stats_path.mkdir(parents=True, exist_ok=True)
-    timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
-    filepath = stats_path / f"{timestamp}_survival_times.zip"
-    results.to_csv(filepath, float_format="%g", compression="zip")
-    print(f"Saved statistics to {filepath}")
+    model_path = Path("statistics/models")
+    model_path.mkdir(parents=True, exist_ok=True)
+
+    print("Estimating survival models...")
+    process_parallel(orders.groupby("month"), compute_survival)
+
+    # # save to csv
+    # timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
+    # filepath = stats_path / f"{timestamp}_survival_times.zip"
+    # results.to_csv(filepath, float_format="%g", compression="zip")
+    # print(f"Saved statistics to {filepath}")
 
     print(f"\n {5*'    '} <<<<< Done >>>>> \n")
 
@@ -52,7 +55,6 @@ def process_parallel(inputs: Iterator[Any], function: Callable) -> pd.DataFrame:
         parallel_processes = pool.imap_unordered(function, inputs,)
         for output in tqdm(parallel_processes):
             results.append(output)
-    results = pd.concat(results, sort=False)
     return results
 
 
