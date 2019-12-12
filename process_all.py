@@ -33,7 +33,7 @@ def main():
 
     # save to csv
     stats_path = Path("statistics/daily_liquidity")
-    stats_path.mkdir(exist_ok=True)
+    stats_path.mkdir(parents=True, exist_ok=True)
     timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
     filepath = stats_path / f"{timestamp}_liquidity_stats.csv"
     results.to_csv(filepath, float_format="%g")
