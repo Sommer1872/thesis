@@ -64,7 +64,6 @@ def calculate_order_stats(
 
     # only look at orders that have been entered at most 1 tick away from best
     columns = [
-        "distance_in_ticks",
         "first_fill_time",
         "remove_time",
     ]
@@ -82,7 +81,7 @@ def calculate_order_stats(
         order_stats["remove_time"] - order_stats.index
     ) / 1000
 
-    order_stats = order_stats[["time_to_fill", "time_to_removal", "distance_in_ticks"]]
+    order_stats = order_stats[["time_to_fill", "time_to_removal"]]
 
     return order_stats
 

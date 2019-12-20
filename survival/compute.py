@@ -10,6 +10,19 @@ import numpy as np
 import pandas as pd
 
 
+def save_pickle(group: Tuple[str, pd.DataFrame]) -> None:
+    """
+    """
+    isin: str
+    orders: pd.DataFrame
+    isin, orders = group
+
+    filename = f"{isin}_times.pickle.gz"
+    orders.to_pickle(f"statistics/times/{filename}")
+
+    return None
+
+
 def compute_survival(group: Tuple[int, pd.DataFrame]) -> None:
     """
     """

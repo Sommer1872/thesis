@@ -3,6 +3,7 @@
 **.pickle
 .mypy_cache/
 __pycache__/
+.idea/
 **.ipynb
 **.xlsx
 *.npy
