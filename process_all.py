@@ -22,7 +22,7 @@ def main():
     print(f"Started at {start_time}")
 
     data_path = Path.home() / "data/ITCH_market_data/unzipped"
-    pattern = "*2019*.bin"
+    pattern = "*.bin"  # *2019
     print(f"Considering files with pattern {pattern}")
 
     num_files = len(list(data_path.glob(pattern)))
