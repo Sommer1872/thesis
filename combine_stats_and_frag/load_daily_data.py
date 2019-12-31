@@ -47,9 +47,13 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     delisted_isins = last_date_avail.index.to_list()
     daily_stats = daily_stats[~daily_stats["isin"].isin(delisted_isins)]
 
-    # exclude aluflexpack (because they had IPO only on June 28th)
+    # exclude all stocks that had an IPO later than June 1st
     daily_stats.set_index("isin", append=True, inplace=True)
-    daily_stats = daily_stats.drop(index="CH0453226893", level="isin")
+    first_traded = daily_stats.reset_index().groupby("isin")["date"].min()
+    first_traded = first_traded.reset_index()
+    bad_isins = first_traded.loc[first_traded["date"] >= pd.Timestamp("20190601"), "isin"]
+    for isin in bad_isins:
+        daily_stats.drop(index=isin, level="isin", inplace=True)
 
     # exclude Alcon on 8th of April
     daily_stats.drop(index=("2019-04-08", "CH0432492467"), inplace=True)
