@@ -81,8 +81,9 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
     # add date/month as a column
     this_date = pd.Timestamp(this_day_imi_data.date)
     survival_times["date"] = this_date
-    survival_times["month"] = this_date.month
+    yearmonth = this_date.year * 100 + this_date.month
+    survival_times["yearmonth"] = yearmonth
 
-    survival_times.set_index("month", inplace=True)
+    survival_times.set_index("yearmonth", inplace=True)
 
     return survival_times

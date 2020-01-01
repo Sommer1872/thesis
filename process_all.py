@@ -36,7 +36,7 @@ def main():
     model_path.mkdir(parents=True, exist_ok=True)
 
     print("Estimating survival models...")
-    process_parallel(orders.groupby("month"), compute_survival)
+    process_parallel(orders.groupby("yearmonth"), compute_survival)
 
     # # save to csv
     # timestamp = pd.Timestamp("now").strftime("%Y%m%d_%H-%M-%S")
