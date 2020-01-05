@@ -9,6 +9,7 @@ import pandas as pd
 def calculate_best_depth_statistics(
     best_depths: pd.DataFrame,
     trading_actions: pd.DataFrame,
+    metainfo: pd.Series,
     start_microsecond: int,
     end_microsecond: int,
 ) -> Dict[str, float]:
@@ -30,6 +31,8 @@ def calculate_best_depth_statistics(
 
     # sum depth at bid and ask
     best_depths["depth_at_best"] = best_depths.sum(axis=1)
+
+    best_depths["depth_at_best"] /= 10 ** metainfo.price_decimals
 
     # time validity
     best_depths.reset_index(inplace=True)

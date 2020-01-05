@@ -37,7 +37,6 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
         this_orderbook_stats = dict()
 
         metainfo = metadata.loc[orderbook_no]
-        price_decimals = 10 ** metainfo.price_decimals
 
         # tick sizes
         tick_table_id = int(metainfo.price_tick_table_id)
@@ -70,7 +69,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
         # depth at best
         best_depths = pd.DataFrame(this_day_imi_data.best_depths[orderbook_no])
         best_depth_stats = calculate_best_depth_statistics(
-            best_depths, trading_actions, start_microsecond, end_microsecond
+            best_depths, trading_actions, metainfo, start_microsecond, end_microsecond
         )
         this_orderbook_stats["best_depth_stats"] = best_depth_stats
 
@@ -116,6 +115,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
         transactions["mid"] = (
             transactions["best_ask"] + transactions["best_bid"]
         ) * 0.5
+        price_decimals = 10 ** metainfo.price_decimals
         transactions[["price", "best_bid", "best_ask", "mid"]] /= price_decimals
 
         # trade statistics
