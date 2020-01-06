@@ -55,11 +55,26 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     for isin in bad_isins:
         daily_stats.drop(index=isin, level="isin", inplace=True)
 
-    # exclude Alcon on 8th of April
+    # exclude Alcon on 8th of April, the day before IPO
     daily_stats.drop(index=("2019-04-08", "CH0432492467"), inplace=True)
     daily_stats.reset_index("isin", inplace=True)
 
+    # join VSMI
+    vsmi = load_vsmi()
+    daily_stats = daily_stats.join(vsmi["VSMI"], on="date")
+
     return daily_stats
+
+
+def load_vsmi() -> pd.DataFrame:
+    """
+    """
+    vsmi = pd.read_csv("statistics/h_vsmi_30.csv", sep=";")
+    vsmi.columns = vsmi.columns.str.lower()
+    vsmi.rename(columns={"indexvalue": "VSMI"}, inplace=True)
+    vsmi["date"] = pd.to_datetime(vsmi["date"], format="%d.%m.%Y")
+    vsmi.set_index("date", inplace=True)
+    return vsmi
 
 
 def load_frag_data() -> pd.DataFrame:
