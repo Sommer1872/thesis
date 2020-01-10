@@ -31,10 +31,16 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
 
     all_statistics = list()
 
+    # load relevant isins
+    relevant_isins = pd.read_csv("statistics/relevant_isins.csv")["isin"].to_list()
+
     # next, we calculate various statistics for each stock:
     for orderbook_no in metadata.index:
 
+        # only process it if the stock is relevant
         metainfo = metadata.loc[orderbook_no]
+        if metainfo["isin"] not in relevant_isins:
+            continue
 
         # tick sizes
         tick_table_id = int(metainfo.price_tick_table_id)
