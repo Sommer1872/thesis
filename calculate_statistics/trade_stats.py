@@ -21,7 +21,7 @@ def calculate_effective_statistics(
 
     # spread leeway using tick sizes and an unequal join
     price_decimals = 10 ** metainfo.price_decimals
-    tick_sizes /= price_decimals
+    tick_sizes = tick_sizes.copy() / price_decimals
     # unequal join
     conditions = [
         (transactions.price.values >= step.price_start)
@@ -70,6 +70,5 @@ def calculate_effective_statistics(
         stats["eff_spread_leeway_median"] = agg_stats.loc["50%", "spread_leeway"]
         stats["trade_value_mean"] = agg_stats.loc["mean", "trade_value"]
         stats["trade_value_median"] = agg_stats.loc["50%", "trade_value"]
-        stats["tick_size_mean"] = agg_stats.loc["mean", "tick_size"]
 
     return stats

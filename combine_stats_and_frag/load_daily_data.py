@@ -109,7 +109,7 @@ def load_frag_data() -> pd.DataFrame:
 
 def load_bloomberg_data() -> pd.DataFrame:
     bloomi = pd.read_csv(
-        f"~/data/turnover_per_venue/20191130_turnover_Bloomberg.csv", sep=";"
+        f"~/data/turnover_per_venue/20191231_turnover_bloomberg.csv", sep=";"
     )
     bloomi = (
         bloomi.iloc[2:].rename(columns={"Unnamed: 0": "date"}).set_index("date").stack()

@@ -9,12 +9,10 @@ import pandas as pd
 def calculate_best_bid_ask_statistics(
     best_bid_ask: pd.DataFrame,
     trading_actions: pd.DataFrame,
-    metainfo: pd.Series,
+    tick_sizes: pd.DataFrame,
     start_microsecond: int,
     end_microsecond: int,
 ) -> Dict[str, float]:
-
-    price_decimals = 10 ** metainfo.price_decimals
 
     best_bid_ask.drop_duplicates(
         subset=["timestamp", "book_side"], inplace=True, keep="last"
@@ -31,8 +29,6 @@ def calculate_best_bid_ask_statistics(
     if not best_bid_ask.shape[1] == 2:
         return empty_result()
 
-    # get prices in chf
-    best_bid_ask = best_bid_ask / price_decimals
     # remember cases when there are not orders on both sides of the order book
     missing = best_bid_ask.isna().all(axis=1)
     best_bid_ask.fillna(method="ffill", inplace=True)
@@ -60,10 +56,31 @@ def calculate_best_bid_ask_statistics(
     # if there are still strange values, we remove them
     best_bid_ask = best_bid_ask[best_bid_ask["quoted_spread"] >= 0]
 
+    for side in ["B", "S"]:
+        prices = best_bid_ask[side]
+        # unequal join
+        conditions = [
+            (prices.values >= step.price_start) & (prices.values < step.price_end)
+            for step in tick_sizes[["price_start", "price_end"]].itertuples()
+        ]
+        best_bid_ask[f"tick_size_{side}"] = np.piecewise(
+            np.zeros(prices.shape[0]), conditions, tick_sizes.tick_size.values
+        )
+
+    best_bid_ask["distance_to_B"] = (
+        best_bid_ask["mid"] - best_bid_ask["B"]
+    ) / best_bid_ask["tick_size_B"]
+    best_bid_ask["distance_to_S"] = (
+        best_bid_ask["S"] - best_bid_ask["mid"]
+    ) / best_bid_ask["tick_size_S"]
+    best_bid_ask["spread_leeway"] = round(
+        best_bid_ask["distance_to_B"] + best_bid_ask["distance_to_S"] - 1
+    )
+
     total_time = best_bid_ask["time_validity"].sum()
     if total_time > 0:
-        quoted_spread_time_weighted = (
-            np.sum(best_bid_ask["quoted_spread"] * best_bid_ask["time_validity"])
+        quoted_spread_leeway_time_weighted = (
+            np.sum(best_bid_ask["spread_leeway"] * best_bid_ask["time_validity"])
             / total_time
         )
         quoted_rel_spread_bps_time_weighted = (
@@ -74,7 +91,7 @@ def calculate_best_bid_ask_statistics(
             / total_time
         )
         return {
-            "quoted_spread_time_weighted": quoted_spread_time_weighted,
+            "quoted_spread_leeway_time_weighted": quoted_spread_leeway_time_weighted,
             "quoted_rel_spread_bps_time_weighted": quoted_rel_spread_bps_time_weighted,
         }
     else:
@@ -82,7 +99,7 @@ def calculate_best_bid_ask_statistics(
 
 
 def empty_result():
-        return {
-            "quoted_spread_time_weighted": np.nan,
-            "quoted_rel_spread_bps_time_weighted": np.nan,
-        }
+    return {
+        "quoted_spread_leeway_time_weighted": np.nan,
+        "quoted_rel_spread_bps_time_weighted": np.nan,
+    }

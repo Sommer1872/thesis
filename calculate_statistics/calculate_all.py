@@ -62,7 +62,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
         # best bid and ask
         best_bid_ask = pd.DataFrame(this_day_imi_data.best_bid_ask[orderbook_no])
         best_bid_ask_stats = calculate_best_bid_ask_statistics(
-            best_bid_ask, trading_actions, metainfo, start_microsecond, end_microsecond
+            best_bid_ask, trading_actions, tick_sizes, start_microsecond, end_microsecond
         )
         this_orderbook_stats["best_bid_ask_stats"] = best_bid_ask_stats
 
