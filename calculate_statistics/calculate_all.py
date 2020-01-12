@@ -81,7 +81,7 @@ def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
             int(start_microsecond * 1e-6) : int(end_microsecond * 1e-6)
         ]
         snapshot_stats = calculate_snapshot_statistics(
-            snapshots, trading_actions, metainfo
+            snapshots, trading_actions, tick_sizes, metainfo
         )
         this_orderbook_stats["snapshot_stats"] = snapshot_stats
 
