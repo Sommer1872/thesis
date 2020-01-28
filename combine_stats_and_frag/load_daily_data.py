@@ -33,10 +33,13 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
         / daily_stats["message_counts_delete_order"]
     )
     daily_stats["log_turnover"] = np.log(daily_stats["turnover"])
+    daily_stats["min_tick_size"] = daily_stats["tick_size_mean"]
+    daily_stats.drop(columns="tick_size_mean", inplace=True)
+    daily_stats["min_tick_size_relative"] = daily_stats["min_tick_size"] / daily_stats["price_mean"]
     daily_stats["price_reciprocal"] = 1 / daily_stats["price_mean"]
     daily_stats["AT_proxy"] = (
-        daily_stats["turnover"] / (daily_stats["message_counts_sum"]) * -1
-    )  # Hendershott et al. 2017 JF p. 7
+        (daily_stats["turnover"] / 100) / (daily_stats["message_counts_sum"]) * -1
+    )  # Hendershott et al. 2011 JF p. 7
 
     # filter to not include delisted stocks
     last_date_avail = daily_stats.reset_index()[["date", "isin"]].groupby("isin").max()
@@ -47,21 +50,27 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     delisted_isins = last_date_avail.index.to_list()
     daily_stats = daily_stats[~daily_stats["isin"].isin(delisted_isins)]
 
-    # exclude all stocks that had an IPO later than June 1st
+    # exclude all stocks that had an IPO later than January 1st
     daily_stats.set_index("isin", append=True, inplace=True)
     first_traded = daily_stats.reset_index().groupby("isin")["date"].min()
     first_traded = first_traded.reset_index()
-    bad_isins = first_traded.loc[first_traded["date"] >= pd.Timestamp("20190601"), "isin"]
+    bad_isins = first_traded.loc[
+        first_traded["date"] >= pd.Timestamp("20190101"), "isin"
+    ]
     for isin in bad_isins:
         daily_stats.drop(index=isin, level="isin", inplace=True)
 
-    # exclude Alcon on 8th of April, the day before IPO
-    daily_stats.drop(index=("2019-04-08", "CH0432492467"), inplace=True)
+    # also dropping Panalpina, because it was taken-over in August, but continued trading
+    daily_stats.drop(index="CH0002168083", level="isin", inplace=True)
+
+    # exclude entries with no messages sent
+    daily_stats.dropna(subset=["message_counts_sum"], inplace=True)
+
     daily_stats.reset_index("isin", inplace=True)
 
     # join VSMI
     vsmi = load_vsmi()
-    daily_stats = daily_stats.join(vsmi["VSMI"], on="date")
+    daily_stats = daily_stats.join(vsmi["VSMI"], how="left", on="date")
 
     return daily_stats
 
@@ -75,6 +84,30 @@ def load_vsmi() -> pd.DataFrame:
     vsmi["date"] = pd.to_datetime(vsmi["date"], format="%d.%m.%Y")
     vsmi.set_index("date", inplace=True)
     return vsmi
+
+
+def load_copustat():
+    path = Path("/Users/simon/data/turnover_per_venue/20200118_compustat.csv")
+    variables = dict(
+        isin="isin",
+        datadate="date",
+        cshoc="shares_outstanding",
+        cshtrd="trading_volume",
+        prccd="price_close",
+        exchg="exchange_code",
+        #     prchd="price_high",
+        #     prcld="price_low",
+    )
+    compu = pd.read_csv(path)
+    compu.rename(columns=variables, inplace=True)
+    compu.drop(
+        columns=[col for col in compu.columns if col not in variables.values()],
+        inplace=True,
+    )
+    compu = compu[compu["exchange_code"] == 151]
+    compu["date"] = pd.to_datetime(compu["date"], format="%Y%m%d")
+    compu.set_index(["date", "isin"], inplace=True)
+    return compu
 
 
 def load_frag_data() -> pd.DataFrame:
@@ -112,7 +145,7 @@ def load_bloomberg_data() -> pd.DataFrame:
         f"~/data/turnover_per_venue/20191231_turnover_bloomberg.csv", sep=";"
     )
     bloomi = (
-        bloomi.iloc[2:].rename(columns={"Unnamed: 0": "date"}).set_index("date").stack()
+        bloomi.iloc[1:].rename(columns={"Unnamed: 0": "date"}).set_index("date").stack()
     )
     bloomi = (
         pd.DataFrame(bloomi)
