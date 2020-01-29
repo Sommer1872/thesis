@@ -102,7 +102,7 @@ def calculate_order_stats(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        
+
         stats["time_to_fill_mean"] = close_to_best["time_to_fill"].mean()
         stats["time_to_fill_median"] = close_to_best["time_to_fill"].median()
         stats["time_to_removal_mean"] = close_to_best["time_to_removal"].mean()
@@ -111,7 +111,6 @@ def calculate_order_stats(
         stats["value_entered_mean"] = close_to_best["value_entered"].mean()
         stats["value_entered_median"] = close_to_best["value_entered"].median()
         stats["value_entered_total"] = close_to_best["value_entered"].sum()
-
         stats["value_filled_total"] = close_to_best["value_filled"].sum()
 
         stats["fill_ratio_mean"] = (

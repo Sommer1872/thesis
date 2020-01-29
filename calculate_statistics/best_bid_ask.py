@@ -56,33 +56,33 @@ def calculate_best_bid_ask_statistics(
     # if there are still strange values, we remove them
     best_bid_ask = best_bid_ask[best_bid_ask["quoted_spread"] >= 0]
 
-    for side in ["B", "S"]:
-        prices = best_bid_ask[side]
-        # unequal join
-        conditions = [
-            (prices.values >= step.price_start) & (prices.values < step.price_end)
-            for step in tick_sizes[["price_start", "price_end"]].itertuples()
-        ]
-        best_bid_ask[f"tick_size_{side}"] = np.piecewise(
-            np.zeros(prices.shape[0]), conditions, tick_sizes.tick_size.values
-        )
+    # for side in ["B", "S"]:
+    #     prices = best_bid_ask[side]
+    #     # unequal join
+    #     conditions = [
+    #         (prices.values >= step.price_start) & (prices.values < step.price_end)
+    #         for step in tick_sizes[["price_start", "price_end"]].itertuples()
+    #     ]
+    #     best_bid_ask[f"tick_size_{side}"] = np.piecewise(
+    #         np.zeros(prices.shape[0]), conditions, tick_sizes.tick_size.values
+    #     )
 
-    best_bid_ask["distance_to_B"] = (
-        best_bid_ask["mid"] - best_bid_ask["B"]
-    ) / best_bid_ask["tick_size_B"]
-    best_bid_ask["distance_to_S"] = (
-        best_bid_ask["S"] - best_bid_ask["mid"]
-    ) / best_bid_ask["tick_size_S"]
-    best_bid_ask["spread_leeway"] = round(
-        best_bid_ask["distance_to_B"] + best_bid_ask["distance_to_S"] - 1
-    )
+    # best_bid_ask["distance_to_B"] = (
+    #     best_bid_ask["mid"] - best_bid_ask["B"]
+    # ) / best_bid_ask["tick_size_B"]
+    # best_bid_ask["distance_to_S"] = (
+    #     best_bid_ask["S"] - best_bid_ask["mid"]
+    # ) / best_bid_ask["tick_size_S"]
+    # best_bid_ask["spread_leeway"] = round(
+    #     best_bid_ask["distance_to_B"] + best_bid_ask["distance_to_S"] - 1
+    # )
 
     total_time = best_bid_ask["time_validity"].sum()
     if total_time > 0:
-        quoted_spread_leeway_time_weighted = (
-            np.sum(best_bid_ask["spread_leeway"] * best_bid_ask["time_validity"])
-            / total_time
-        )
+        # quoted_spread_leeway_time_weighted = (
+        #     np.sum(best_bid_ask["spread_leeway"] * best_bid_ask["time_validity"])
+        #     / total_time
+        # )
         quoted_rel_spread_bps_time_weighted = (
             np.sum(
                 best_bid_ask["relative_quoted_spread_bps"]
@@ -91,7 +91,7 @@ def calculate_best_bid_ask_statistics(
             / total_time
         )
         return {
-            "quoted_spread_leeway_time_weighted": quoted_spread_leeway_time_weighted,
+            # "quoted_spread_leeway_time_weighted": quoted_spread_leeway_time_weighted,
             "quoted_rel_spread_bps_time_weighted": quoted_rel_spread_bps_time_weighted,
         }
     else:

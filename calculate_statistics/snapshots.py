@@ -43,8 +43,8 @@ def calculate_snapshot_statistics(
     # if there are still strange values, we remove them
     snapshots = snapshots[snapshots["quoted_spread"] >= 0]
 
-    # convert tick_sizes to CHF
-    tick_sizes = tick_sizes.copy() / price_decimals
+    # # convert tick_sizes to CHF
+    # tick_sizes = tick_sizes.copy() / price_decimals
 
     # spread leeway
     for side in ["best_bid", "best_ask"]:
@@ -76,7 +76,7 @@ def calculate_snapshot_statistics(
         "quoted_rel_spread_bps_median": snapshot_stats.loc[
             "50%", "relative_quoted_spread_bps"
         ],
-        "quoted_spread_leeway_mean": snapshot_stats.loc["mean", "spread_leeway"],
+        # "quoted_spread_leeway_mean": snapshot_stats.loc["mean", "spread_leeway"],
         "tick_size_mean": snapshot_stats.loc["mean", "tick_size_best_bid"],
         "depth_at_best_mean": snapshot_stats.loc["mean", "depth_at_best"],
         "depth_at_best_median": snapshot_stats.loc["50%", "depth_at_best"],
