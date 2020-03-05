@@ -37,11 +37,14 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     daily_stats.drop(columns="tick_size_mean", inplace=True)
     daily_stats["min_tick_size_relative"] = daily_stats["min_tick_size"] / daily_stats["price_mean"]
     daily_stats["price_reciprocal"] = 1 / daily_stats["price_mean"]
+    daily_stats["price_log"] = np.log(daily_stats["price_mean"])
     daily_stats["AT_proxy"] = (
         (daily_stats["turnover"] / 100) / (daily_stats["message_counts_sum"]) * -1
     )  # Hendershott et al. 2011 JF p. 7
 
-    # filter to not include delisted stocks
+    print(f"Initial number of stocks {daily_stats['isin'].nunique()}\n")
+
+    print("Filter to not include delisted stocks")
     last_date_avail = daily_stats.reset_index()[["date", "isin"]].groupby("isin").max()
     last_date_avail = last_date_avail.groupby("isin").max()
     last_date_avail = last_date_avail[
@@ -49,8 +52,9 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     ]
     delisted_isins = last_date_avail.index.to_list()
     daily_stats = daily_stats[~daily_stats["isin"].isin(delisted_isins)]
+    print(f"Num remaining stocks {daily_stats['isin'].nunique()}\n")
 
-    # exclude all stocks that had an IPO later than January 1st
+    print("Exclude all stocks that had an IPO later than January 1st 2019")
     daily_stats.set_index("isin", append=True, inplace=True)
     first_traded = daily_stats.reset_index().groupby("isin")["date"].min()
     first_traded = first_traded.reset_index()
@@ -60,13 +64,14 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
     for isin in bad_isins:
         daily_stats.drop(index=isin, level="isin", inplace=True)
 
-    # also dropping Panalpina, because it was taken-over in August, but continued trading
-    daily_stats.drop(index="CH0002168083", level="isin", inplace=True)
+    # print("also dropping Panalpina, because it was taken-over in August, but continued trading")
+    # daily_stats.drop(index="CH0002168083", level="isin", inplace=True)
 
     # exclude entries with no messages sent
     daily_stats.dropna(subset=["message_counts_sum"], inplace=True)
 
     daily_stats.reset_index("isin", inplace=True)
+    print(f"Num remaining stocks {daily_stats['isin'].nunique()}\n")
 
     # join VSMI
     vsmi = load_vsmi()
@@ -126,9 +131,9 @@ def load_frag_data() -> pd.DataFrame:
     ].sum()
     frag["market_share"] = frag["volume"] / frag["market_volume"]
     frag["market_share_squared"] = frag["market_share"] ** 2
-    frag["non_fragmentation_index"] = frag.groupby(
+    frag["lit_frag"] = frag.groupby(
         ["date", "share_class_id_bb_global"]
-    )["market_share_squared"].sum()
+    )["market_share_squared"].sum() ** -1
     # frag["inverse_market_share"] = 1 / (frag["volume"] / frag["market_volume"])
 
     frag.reset_index("share_class_id_bb_global", inplace=True)

@@ -47,6 +47,7 @@ class SingleDayIMIData(object):
         self.orderbooks = dict()
         self.price_tick_sizes = defaultdict(dict)
         self.trading_actions = dict()
+        self.system_events = list()
 
         self.best_bid_ask = dict()
         self.best_depths = dict()
@@ -54,6 +55,7 @@ class SingleDayIMIData(object):
         self.order_stats = dict()
         self.message_counts = dict()
         self.snapshots = dict()
+        self.open_close = dict()
 
         self.Transaction = namedtuple(
             "Transaction",
@@ -104,7 +106,7 @@ class SingleDayIMIData(object):
                 orderbook_no = message[4]
                 price = message[5]
                 self.message_counts[orderbook_no]["add_order"] += 1
-                this_order = dict() 
+                this_order = dict()
                 self.orders[order_no] = this_order
                 this_order["orderbook_no"] = orderbook_no
                 this_order["book_side"] = book_side
@@ -224,7 +226,7 @@ class SingleDayIMIData(object):
                 quantity = message[3]
                 price = message[4]
                 # create new order entry
-                new_order = dict() 
+                new_order = dict()
                 self.orders[new_order_no] = new_order
                 new_order["book_side"] = book_side
                 new_order["quantity_outstanding"] = quantity
@@ -368,10 +370,11 @@ class SingleDayIMIData(object):
                 executed_quantity = message[2]
                 # match_number = message[3]
                 # printable = message[4]
-                # execution_price = message[5]
+                execution_price = message[5]
                 # update the order entry
                 this_order = self.orders[order_no]
                 orderbook_no, book_side, price, _ = self.get_order_info(this_order)
+                self.open_close[orderbook_no].append((timestamp, execution_price))
                 this_order["quantity_outstanding"] -= executed_quantity
                 # update the order
                 if this_order["quantity_outstanding"] == 0:
@@ -406,7 +409,7 @@ class SingleDayIMIData(object):
 
                 # initialize metadata
                 this_metadata = dict()
-                self.metadata[orderbook_no] = this_metadata 
+                self.metadata[orderbook_no] = this_metadata
                 this_metadata["price_type"] = message[2]
                 this_metadata["isin"] = message[3]
                 this_metadata["currency"] = message[4]
@@ -423,6 +426,7 @@ class SingleDayIMIData(object):
                 self.transactions[orderbook_no] = list()
                 self.order_stats[orderbook_no] = dict()
                 self.snapshots[orderbook_no] = dict()
+                self.open_close[orderbook_no] = list()
                 self.trading_actions[orderbook_no] = list()
 
             # Price Tick Size message
@@ -456,19 +460,22 @@ class SingleDayIMIData(object):
                     (timestamp, trading_state, book_condition)
                 )
 
+            # System Event message
+            elif message_type == b"S":
+                message = self.unpack(">i8ssi", message)
+                timestamp = self.microseconds + message[0] * 1e-3
+                group = message[1]
+                event_code = message[2]
+                orderbook_no = message[3]
+                self.system_events.append(
+                    (timestamp, group, event_code, orderbook_no)
+                )
+
             else:
                 pass  # because message type is not relevant
 
             # update current position for next iteration
             self.current_position = message_end
-
-            # # System Event message
-            # elif message_type == b"S":
-            #     message = self.unpack(">i8ssi", message)
-            #     timestamp = self.microseconds + message[0] * 1e-3
-            #     group = message[1]
-            #     event_code = message[2]
-            #     orderbook_no = message[3]
 
             # # Indicative Price / Quantity Message
             # elif message_type == b"I":

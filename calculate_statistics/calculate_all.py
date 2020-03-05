@@ -14,7 +14,7 @@ from .realized_vola import calculate_realized_vola_stats
 
 def calculate_orderbook_stats(this_day_imi_data) -> pd.DataFrame:
 
-    start_microsecond = int(9.25 * 3600e6)
+    start_microsecond = int(9.08333333 * 3600e6)
     end_microsecond = int(17.25 * 3600e6)
 
     # first, nicely format metadata:
