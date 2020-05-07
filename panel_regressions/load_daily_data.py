@@ -83,7 +83,7 @@ def load_market_quality_statistics(filepath: Path,) -> pd.DataFrame:
 def load_vsmi() -> pd.DataFrame:
     """
     """
-    vsmi = pd.read_csv("statistics/h_vsmi_30.csv", sep=";")
+    vsmi = pd.read_csv("../statistics/h_vsmi_30.csv", sep=";")
     vsmi.columns = vsmi.columns.str.lower()
     vsmi.rename(columns={"indexvalue": "VSMI"}, inplace=True)
     vsmi["date"] = pd.to_datetime(vsmi["date"], format="%d.%m.%Y")
